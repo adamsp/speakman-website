@@ -6,10 +6,6 @@ sharing: false
 footer: true
 ---
 
-I write code; some of it bad, some of it good. I'm working hard to write less of the bad.
-
-This site will cover my adventures as I dabble in all sorts of different technologies.
-
 I'm currently living in Auckland, New Zealand, and am looking for a development job - I've been on holiday since the end of November 2012 and am looking to get back into work. If you're interested in hiring me (or in an interview, at least), you can tweet me [@adamsnz](https://twitter.com/adamsnz), <a href="mailto:adam@speakman.net.nz?Subject=Employment%20opportunity">email me</a>, or even contact me on [LinkedIn](http://www.linkedin.com/profile/view?id=137085845) if that's your thing. Ideally I'd like to work with something that utilises my Math background, before I forget it all - however I'm interested in hearing what's available in all different areas.
 
 I graduated from the University of Auckland in June 2011, majoring in Computer Science with a heavy Math influence in my selected papers. My experience includes 18 months work at a company here in Auckland called [Pingar](http://pingar.com) where we developed a Natural Language Processing API for extracting useful information from unstructured text. My experience there included (but was not limited to) technologies such as C# (.NET 3.5/4), Java, Mercurial (Hg) source control, Amazon EMR/EC2/S3, NLP libraries such as Mallet.
@@ -27,5 +23,7 @@ Some of the tasks I completed while at Pingar:
 * Maintaining some large regular expressions for extracting common pattern based information such as phone numbers
 
 In my spare time, I like to play with mobile development. [What's Shaking, NZ?](http://www.whatsshaking.co.nz) is an earthquake monitoring & notification app available on Android, Windows Phone 7 and Windows Phone 8 - and I plan on releasing an iOS version sometime soon too. I'm currently working on an Android app to browse images available on [Wookmark](http://www.wookmark.com), an image bookmarking site. My code is all available on [Github](https://github.com/adamsp) - I'm slowly learning how to bend Git to my will.
+
+Previously I've tutored first-year Compsci papers at the University of Auckland, built a custom app for a client to convert Google Forms data into formatted Word documents, as well as spending a few years in retail - including leading a team of 7 in the computer department at Dick Smith Electronics Sylvia Park.
 
 So, if you like what you see, <a href="mailto:adam@speakman.net.nz?Subject=Employment%20opportunity">hire me</a>. I won't disappoint!
