@@ -6,7 +6,7 @@ comments: false
 categories: windows-phone
 ---
 
-I've been trying to clean up the What's Shaking, NZ? for Windows Phone 7 [codebase](https://github.com/adamsp/wsnz-windowsphone) recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I'll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start (note here that I haven't .
+I've been trying to clean up the What's Shaking, NZ? for Windows Phone 7 [codebase](https://github.com/adamsp/wsnz-windowsphone) recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I'll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.
 
 <!-- more -->
 

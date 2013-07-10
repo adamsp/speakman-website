@@ -10,6 +10,8 @@ Adding a support library to Android Studio is a bit different to how it's done i
 
 <!-- more -->
 
+__Edit July 10 2013:__ Note that this post only applies to projects __not__ using Gradle.
+
 Most of this information can be found on the [Android Developer site](https://developer.android.com/google/play-services/setup.html).
 
 This guide assumes you already have an application project set up, and you're looking to add this support library in to enable new features. For setting up the main project, check out the [Android Studio documentation](http://developer.android.com/sdk/installing/studio.html).
