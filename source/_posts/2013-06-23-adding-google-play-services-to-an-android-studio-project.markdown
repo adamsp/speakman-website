@@ -3,7 +3,7 @@ layout: post
 title: "Adding Google Play Services to an Android Studio project"
 date: 2013-06-23 10:55
 comments: true
-categories: 
+categories: android android-studio google-play
 ---
 
 Adding a support library to Android Studio is a bit different to how it's done in Eclipse. Where you'd add a 'project' in Eclipse, in Studio you add a 'Module' (which is a sub-project of your overall application - similar to Projects in a Solution, if you've done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.

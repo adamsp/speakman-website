@@ -3,7 +3,7 @@ layout: post
 title: "Converting WP7 Maps to WP8"
 date: 2012-12-08 11:07
 comments: true
-categories: 
+categories: windows-phone
 ---
 
 After [converting](http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207030.aspx) a Windows Phone 7 application ([What's Shaking, NZ?](http://www.whatsshaking.co.nz)) to Windows Phone 8, I noticed a few deprecation warnings around the Maps SDK. Converting the code to use the WP8 Maps SDK instead was fairly straightforward, but there were a few gotchas which I've covered in this post.

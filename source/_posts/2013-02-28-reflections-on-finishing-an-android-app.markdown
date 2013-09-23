@@ -3,7 +3,7 @@ layout: post
 title: "Reflections on finishing an Android app"
 date: 2013-02-28 22:31
 comments: true
-categories: 
+categories: android
 ---
 
 A few days ago I finally finished the application I've been working on in my spare moments over the last month or two. It's called [Wookmark Viewer](https://github.com/adamsp/wookmark) and it's a simple little app that lets you browse the latest images saved on [Wookmark.com](http://www.wookmark.com) (Wookmark is an 'image bookmarking' site, so there's all sorts of images from all over the web that get saved there). This was an interesting project for me, as I got to use a few different open source libraries (including one I ended up almost totally rewriting), switched IDE from Eclipse to IntelliJ, and had to figure out some new Android features I hadn't used before.
