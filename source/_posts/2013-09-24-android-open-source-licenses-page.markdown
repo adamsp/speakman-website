@@ -12,7 +12,7 @@ Ever used an open source library in your Android app? If you have, then you [pro
 
 My first attempt looked like this - in fact, this is currently what my '[Wookmark Viewer](https://github.com/adamsp/wookmark)' licenses page looks like:
 
-[{% img /images/android-licenses-page/wookmark_licenses.png 240 400 Wookmark Licenses %}](images/android-licenses-page/wookmark_licenses.png)
+[{% img /images/android-licenses-page/wookmark_licenses.png 240 400 Wookmark Licenses %}](/images/android-licenses-page/wookmark_licenses.png)
 
 However, while this page details the libraries used and their licenses, and provides links to those things, it isn't good enough. It says in the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html):
 
@@ -24,7 +24,7 @@ So how should I do that? Do I have to include the same license multiple times fo
 
 I revisited these issues at work recently when I was tasked with adding the licenses page to our app. After some time looking around online, I couldn't really find any suggestions as to how this page should behave, how it should look, or how to display licenses for multiple libraries. The only thing I found was [this Stack Overflow question](http://stackoverflow.com/questions/11300552/license-screen-about-phone-legal-information-open-licenses-screen), but that was enough of a lead to set me on the right path. I checked out some of the other Google apps - see the Play Music and Gmail apps licenses pages below. This is simply an HTML page displayed in a DialogFragment. This is more like it!
 
-[{% img /images/android-licenses-page/play_music_licenses.png 240 400 Play Music Licenses %}](images/android-licenses-page/play_music_licenses.png)[{% img /images/android-licenses-page/gmail_licenses.png 240 400 Gmail Licenses %}](images/android-licenses-page/gmail_licenses.png)
+[{% img /images/android-licenses-page/play_music_licenses.png 240 400 Play Music Licenses %}](/images/android-licenses-page/play_music_licenses.png)[{% img /images/android-licenses-page/gmail_licenses.png 240 400 Gmail Licenses %}](/images/android-licenses-page/gmail_licenses.png)
 
 This answers the questions of how to display things nicely (including the full license text), how to handle multiple libraries with the same license, how to display any copyright notice, and how to link to any modified source code, as required in the [GPL-2.0](http://opensource.org/licenses/gpl-2.0.php) license, for example. It should also be simple enough to set up to automatically construct this page (or a similar one) in your build scripts - including any custom text you may want to add, as I've done above for my original attempt on the Wookmark app.
 
