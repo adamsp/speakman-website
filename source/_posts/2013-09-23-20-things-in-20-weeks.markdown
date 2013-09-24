@@ -71,7 +71,7 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 21. Create a ‘global’ version of WSNZ + use Gson instead of manual parsing
 
-22. Open source Android app licenses page example - Settings app page comes from a file and that file is created during build - what about one-person apps where your build process is File -> Export?
+22. Open source Android app licenses page example - Settings app page comes from a file and that file is created during build - what about one-person apps where your build process is File -> Export? ([Blog post](../../24/android-open-source-licenses-page/), [Github](https://github.com/adamsp/AndroidLicensesPage))
 
 23. A social network specifically for sharing cat pictures, because cats are awesome.
 
