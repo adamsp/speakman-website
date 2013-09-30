@@ -1,0 +1,29 @@
+---
+layout: post
+title: "20 Things, Week 1"
+date: 2013-09-30 20:52
+comments: true
+categories: 20-things-20-weeks
+---
+
+Week 1 of my 20 Things in 20 Weeks project has gone well. I've finished one project and made some significant progress on another. I've managed to work on things 4 out of 7 days this week, even if only for an hour or two. I've found I've managed to get quite a bit done every time I sit down to work for a short period; problems are easily solved when approached with a fresh mind.
+
+<!-- more -->
+
+This week I've written a [blog post](../../24/android-open-source-licenses-page/) & provided some sample code for how to include an Android Open Source licenses page in your app. This is something I've thought about before, and recently had to implement at work - and couldn't find _any_ guidance for online. What I've done is copy the way Google includes their licenses pages in Play Music and in Gmail. The pages in these apps work well, look good and respect the requirements of the licenses (which, as it turns out, my original implementation did not).
+
+The other project I've been working on has been an Android control called `MultiColumnListView`. As  the name implies, it's a ListView that supports multiple columns. I've written a view like this before, for [Wookmark Viewer](https://github.com/adamsp/wookmark). I'm using what I learned from that, but mostly I'm just rewriting it because that implementation was awful - it was inefficient, the code was hard to follow and it only supported `ImageView`s.
+
+So far, I've implemented scrolling with view replacement at top and bottom, and a variable I can tweak to specify the number of columns - and, unlike my previous attempt, it supports anything that extends `View`. I still need to implement:
+
+- view caching & recycling
+- supplying the number of columns as an attribute
+- scroll clamping
+- 'fling' scrolling
+- different 'modes' for adding views (shortest column next vs iterative over the columns)
+- handling views resizing after being laid out
+- other things I'm forgetting...
+
+So while that's quite a bit still to go, I'm pleased with the progress I've made. I recall having a lot more trouble than this last Christmas when I was writing the code to handle adding & removing views at top & bottom.
+
+So, week 1 went well. We'll see if I can keep it up for the next 19.
