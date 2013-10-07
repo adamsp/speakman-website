@@ -1,0 +1,21 @@
+---
+layout: post
+title: "20 Things Week 2"
+date: 2013-10-07 20:00
+comments: true
+categories: 
+---
+
+Week 2 has not gone so well. I've managed to produce what I wanted (a MultiColumnListView control for Android), but I encountered more problems than I expected. Really, I should've expected that. It's software development we're talking about here, after all.
+
+<!-- more -->
+
+I've been busy in the evenings this week (The Auckland .NET user group, and [Codemania](http://codemania.co.nz/), totally writing off two evenings, for a start), and had a couple of bad days at work - which doesn't inspire one to write much code in the evenings. To go with my busy week, [Daylight Saving](http://www.dia.govt.nz/Daylight-Saving) started last Sunday night, which meant I was more tired than usual all the time as well. Oh, and the NHL season started too - there went another few hours (and go the Canucks!).
+
+With all of that going on, I didn't really get a whole lot done. I had a semi-working solution last week (didn't have scroll clamping working, or view caching, or assorted other things), but I wasn't really happy with it. I spent some time looking at the `ListView` source code, and realised that at some 3700 lines long (as at API level 18), I'd be better of reusing as much of that as possible.
+
+So I tried 'wrapping' 1..N list views instead, with the idea being that for all incoming method calls I'd pass the request to either the correct view, or all views, depending on the request. Turns out there are a lot of public methods that need redirecting - I soon gave up on that. I was pretty disinterested in writing code at the time, so it's possible that this approach still has potential. However…
+
+My 'final' solution is similar to what I had at the end of last week (and indeed, similar to the one I wrote at the beginning of the year). It's significantly more efficient than my original attempt (I understand how to use `onMeasure` and `onLayout` a lot better now), but it can definitely still be better. I need to handle saving instance state, scroll 'fling', and certain touch events, as well as generally cleaning up the code, as it's pretty poor in a few places. On the plus side, it doesn't over scroll past 0 or past the end, the number of columns can be supplied as an attribute in XML, and views are removed & cached for re-use (like an adapter view should do).
+
+I tried to get it ready to put on Github tonight, but I couldn't get Android Studio to do what I wanted - I tried importing the module to test in another project, but it wouldn't work (I was getting "internal IDE errors"). Also, the custom attributes aren't working, so I've decided to hold off on uploading this for now. If I can get it to a stage I'm happy with this week, I'll put it up - I'd like to start on something else this week, though, so I'm not sure if that'll happen.
