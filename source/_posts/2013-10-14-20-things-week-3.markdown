@@ -1,0 +1,11 @@
+---
+layout: post
+title: "20 Things, Week 3"
+date: 2013-10-14 20:15
+comments: true
+categories: 20-things-20-weeks
+---
+
+This week I posted up a Gist showing [how to parse WCF-serialised JSON DateTime objects in Java](https://gist.github.com/adamsp/6914482). I'd done this at work a while ago and saw yet another question on StackOverflow asking how to do it. A quick Google showed there still wasn't any quality examples of how to do it (there were a bunch of ways to do it, but none considered all cases), so I posted that example up.
+
+Additionally, I started on my Twitter app - so far, it loads a timeline and can [post tweets](https://twitter.com/adamsnz/status/389641931313000448). Progress! The nice thing is a lot of what I'm doing at work at the moment can translate well to this. I'd like to have a properly usable client by next week, but we'll see how that goes - I'm sure there's a _lot_ I haven't considered.
