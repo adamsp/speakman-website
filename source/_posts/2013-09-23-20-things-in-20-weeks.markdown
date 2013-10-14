@@ -75,3 +75,5 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 23. A social network specifically for sharing cat pictures, because cats are awesome.
 
+24. A class for parsing WCF formatted DateTime objects in Java - [Gist](https://gist.github.com/adamsp/6914482).
+
