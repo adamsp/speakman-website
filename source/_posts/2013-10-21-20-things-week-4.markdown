@@ -1,0 +1,13 @@
+---
+layout: post
+title: "20 Things, Week 4"
+date: 2013-10-21 21:34
+comments: true
+categories: 20-things-20-weeks
+---
+
+This week I've done a fair bit of work. I just finished a blog post on [Currency localisation](../android-currency-localisation-hell/) which I've had on the back burner for some time - now I remember why, even writing that post gave me a headache. Currency formatting is a giant mess, as the formatting tables for most locales are pretty incomplete.
+
+I've also made some significant progress on Feather (my Twitter app). It now loads a timeline feed and a mentions feed, and saves & loads those to a local database so that they're pre-populated with the most recent data received when you first load the app. It can also post a new tweet (just a very basic `EditText` in a dialog at the moment), as well as Favourite/Unfavourite and Retweet tweets.
+
+The next step with Feather is to build a proper New Tweet dialog fragment, so it can handle Replys/New Tweets/quotes/share intents. Onwards!
