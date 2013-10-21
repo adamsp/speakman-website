@@ -47,7 +47,7 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 9. Sudoku solver (in Python?)
  
-10. Currency formatter class/tests/examples/blog posts
+10. Currency formatter class/tests/examples/blog posts ([Blog post](../../../10/21/android-currency-localisation-hell/), [Github](https://github.com/adamsp/CurrencyFormattingDemo))
 
 11. App that shows current/max/min speed - should be ideal for using RxJava for streaming location data?
 
