@@ -77,3 +77,5 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 24. A class for parsing WCF formatted DateTime objects in Java - [Gist](https://gist.github.com/adamsp/6914482).
 
+25. Twitter-feed Android Daydream, “Dream In Tweets” - [Play Store](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets), [Github](https://github.com/adamsp/DreamInTweets)
+

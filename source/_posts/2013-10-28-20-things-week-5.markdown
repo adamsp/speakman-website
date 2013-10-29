@@ -1,0 +1,29 @@
+---
+layout: post
+title: "20 Things, Week 5"
+date: 2013-10-28 20:07
+comments: true
+categories: android 20-things-20-weeks
+---
+
+This week I wrote [Dream in Tweets](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets), which is an Android Daydream that shows the logged in users Twitter feed. A Daydream is effectively a screen saver that runs on Android 4.2 and up. But unlike a screensaver, it can do everything you can do in a regular Activity.
+
+I used a bit of what I had already written for Feather to create this, but I’ve spent most of today working on things like respecting the [Twitter Display Requirements](https://dev.twitter.com/terms/display-requirements). I’ll be able to reuse almost everything in Feather.
+
+<!-- more --> 
+
+Something I had to figure out how to do was modify the way links are displayed in a `TextView`. For tweet content, Twitter provides you with a way to display shortened links - “http://t.co/abcd” becomes “speakman.net.nz”. There are two ways to display links in an Android `TextView`. You can specify the `autoLink` [property](http://developer.android.com/reference/android/widget/TextView.html#attr_android:autoLink) (which applies a regex to the text and automatically inserts links), or you can set the [movement method like so](http://stackoverflow.com/questions/2734270/how-do-i-make-links-in-a-textview-clickable/2746708#2746708), which handles HTML formatted links in the text.
+
+Now I had two use cases for clickable text. One of these was the username, the timestamp, etc - these I didn’t want to appear as links at all, they had to maintain their existing formatting (I could’ve just assigned a click handler to the view, but I feel this way is tidier than littering click handlers throughout `getView` in my adapter). The other use case was the links in tweet content, which I didn’t like the look of when they had the underline. I’ve [written a class](https://gist.github.com/adamsp/7189653) to handle both these cases. It strips the `URLSpan` out and replaces it with an extension of that class, which modifies the way the link is displayed.
+
+The other thing I’ve written which I think might be of use is a way of handling these clicks within a DreamService. If you’ve got an Android Daydream that’s displaying links in a TextView, you just need to include [this class](https://gist.github.com/adamsp/7189623) and then add your links as follows:
+
+``` java
+LinkMovementMethod lmm = new DreamLinkMovementMethod(mDream);
+TextView someTextView = (TextView)findViewById(R.id.tweet_author_image);
+someTextView.setMovementMethod(lmm);
+someTextView.setText(Html.fromHtml("This is a <a href=\"http://www.google.com\">Clickable Link</a>, "
+        + " accessible from a <a href=\"http://developer.android.com/reference/android/service/dreams/DreamService.html\">Dream Service</a>."));
+```
+
+The `DreamLinkMovementMethod` replicates the `onClick` behaviour of a `URLSpan`, except it  sets the `FLAG_ACTIVITY_NEW_TASK` flag on the `Intent` before it starts it.
