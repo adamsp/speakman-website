@@ -1,0 +1,15 @@
+---
+layout: post
+title: "20 Things, Week 6"
+date: 2013-11-04 21:12
+comments: true
+categories: 20-things-20-weeks
+---
+
+In case you missed it, the [Android Daydream](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets) I linked to in [last weeks](/blog/2013/10/28/20-things-week-5/) post didn’t actually go up until Wednesday - and the blog post (though dated Monday October 28, when I wrote it) didn’t go up until Tuesday. It was quite late on Monday, and the OS X Mavericks update meant my usual site deployment procedure (`rake generate`, `rake deploy`) didn’t work. I had to run `rake` as sudo for some reason (suspect it was something to do with Ruby in the new OS X?), which changed read permissions on everything, then when I tried to deploy, I had to do it as sudo again, and my Github SSH key is for my user, so that didn’t work. I gave up for the evening and went to bed. I managed to revert everything on Tuesday night, and I’m back to my regular deployment process.
+
+<!-- more -->
+
+So after all that, and the fact that I didn’t actually finish the Week 5 code until Wednesday, I had a fairly short Week 6 - especially as Battlefield 4 came out on Friday. I spent most of my spare time over the weekend playing that, knowing I had to come up with something before Monday night.
+
+What I’ve done this week is a very small thing: I’ve installed a new Octopress theme for my site - [Slash](https://github.com/tommy351/Octopress-Theme-Slash). I like this theme a lot better than the default - the social media icons at the top, the font size and style, the layout. I’ve also now got working ‘share’ buttons at the bottom of each post, which is a nice change. In my [original list of 20+ Things](/blog/2013/09/23/20-things-in-20-weeks/), I suggested "Fixing the Twitter stream" down the side - instead, I’ve gotten rid of it, and gone for this new style.
