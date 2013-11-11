@@ -67,7 +67,7 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 19. Time localisation differences for Samsung (and other?…) devices examples + blog post
 
-20. Wedding website for my friends Michael and Rebecca
+20. <del>Wedding website for my friends Michael and Rebecca</del>
 
 21. Create a ‘global’ version of WSNZ + use Gson instead of manual parsing
 

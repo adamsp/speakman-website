@@ -1,0 +1,11 @@
+---
+layout: post
+title: "20 Things, Week 7"
+date: 2013-11-11 18:55
+comments: true
+categories: 20-things-20-weeks
+---
+
+Not much in the way of code this week; work’s been a bit hectic, and I had a wedding to attend on Saturday. I did write a post on [avoiding an OutOfMemoryError on older Android devices when displaying large bitmaps](/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/). 
+
+Speaking of that wedding, it was the one I was going to make a website for - guess that won’t be happening, then... oops.
