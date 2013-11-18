@@ -1,0 +1,13 @@
+---
+layout: post
+title: "20 Things, Week 8"
+date: 2013-11-18 20:24
+comments: true
+categories: 20-things-20-weeks
+---
+
+We had a crazy week at work this week; we’re doing a rewrite of our app, and we had an internal stakeholder demo. Was doing some long hours.
+
+This weekend I went to [devmob](http://devmob.co.nz) in Dunedin. It’s an unconference/barcamp that’s held here for mobile devs from all around the country. Met lots of interesting people and had a great time - but there was no time to write code.
+
+So, this week, I’ve done nothing towards my 20 Things. Unfortunate, but I knew this would happen. Next week I’ll definitely have something out!
