@@ -1,0 +1,11 @@
+---
+layout: post
+title: "20 Things, Week 9"
+date: 2013-11-25 20:01
+comments: true
+categories: 20-things-20-weeks
+---
+
+So this week, like most of the Things I've done for this project, I wrote a blog post. Shocking.
+
+[This post](/blog/2013/11/25/getting-started-with-volley-for-android/) was a fairly hefty one, covering the new [Volley](https://android.googlesource.com/platform/frameworks/volley) library for Android. If you're performing any network activity in an Android app, I'd recommend taking a look at it. It helps to avoid a whole skew of problems you may not even know exist, and has a lot of useful features. It takes a bit of reading to get set up, but once you know what you're doing it's great.
