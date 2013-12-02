@@ -1,0 +1,21 @@
+---
+layout: post
+title: "20 Things, Week 10"
+date: 2013-12-02 17:56
+comments: true
+categories: 20-things-20-weeks
+---
+
+So, the halfway point of my wee experiment. 10 weeks out of 20. The most obvious question at this stage is have I created 10 Things? Nope, but that's okay.
+
+<!-- more -->
+
+With Christmas coming up I've got 2 full weeks off work. That's 2 weeks to spend time with my family, go to the beach, relax, and work on personal projects. I plan to push out enough gists, small projects, blog posts and simple programs in this time to catch up with what I'm behind - and I'll hopefully even be able to get a bigger project done.
+
+Speaking of bigger projects, at this point it's fair to say that I don't think I can do many of the things on my original list - they're too big to do in a week, especially when working a 40 hour week and having anything resembling a social life. I suspected this might be the case, but I was also hopeful that with a public declaration of intent to produce something weekly, I'd be able to find the time to make something happen.
+
+So what have I done this week? Well, again, I've not produced anything. But not because I've been slacking off, or even extremely busy with non-programming tasks. I recently received an email saying my [Android Daydream](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets) wasn't working properly on Android 4.4 - and I've spent most of my spare time over the last week trying to figure this out.
+
+The user-visible bug was that it wasn't closing when you hit Home/Back. Stepping into the code, the call to shutdown the Twitter stream in the `onDreamingStopped` call wasn't returning as quickly as it used to in 4.2 & 4.3 - and then it was eventually crashing with a `NetworkOnMainThreadException`. Clearly that's easy enough to fix - drop the `shutdown` call in another thread and return immediately. But that doesn't fix the problem of why it doesn't return near-immediately, so I've been poring over Android source & changelogs trying to figure out _why_. Most of my findings I've collated in [this StackOverflow question](http://stackoverflow.com/q/20306498/1217087) (which as of this writing, doesn't have an answer).
+
+I'm going to spend more time on this this week - try to reproduce it with another `Transfer-Encoding: chunked` stream, and since it appears to be due to a change in OkHttp, I'll ask in the Square community on Google+. With any luck, I'll have enough data to log a comprehensive bug - or at the least understand what's going on enough to implement a better fix.
