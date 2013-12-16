@@ -1,0 +1,13 @@
+---
+layout: post
+title: "20 Things, Week 11"
+date: 2013-12-09 21:03
+comments: true
+categories: 
+---
+
+Once again, nothing to present this week. I've continued looking into this bug in KitKat that I mentioned last week; I've spent most of my time trying to replicate it in a minimal amount of code. This included exploring the [OkHttp tests](https://github.com/square/okhttp) (which was... an interesting exercise), and modifying the sample code provided for the [original bug](https://code.google.com/p/android/issues/detail?id=38817) whose fix I suspect introduced this problem.
+
+Despite all this, I've still been unable to reproduce it except via a Twitter stream (which requires a bit more setup than a chunked encoding HTTP connection without encoding - and so I've been avoiding this in the minimal time I've had to try this).
+
+Additionally, I lost a bit of motivation part way through the week with [news that 4.4.1 is just around the corner](http://www.xda-developers.com/android/android-4-4-1-update-for-the-nexus-5-now-live/) - if the bug is fixed in that release, I won't bother working on it anymore! Unfortunately, as of this writing, there's still [no Nexus 7 2012 image available](https://developers.google.com/android/nexus/images).
