@@ -1,0 +1,19 @@
+---
+layout: post
+title: "20 Things, Weeks 13 and 14"
+date: 2014-01-01 11:49
+comments: true
+categories: 20-things-20-weeks
+---
+
+You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, 20 Weeks project. I could make excuses about it being Christmas, and being super busy, but that'd be a lie. I was probably playing [Hearthstone](http://us.battle.net/hearthstone/en/).
+
+<!-- more -->
+
+This post is a couple of days late as well - I had the mindset that if I've already missed one, what's one more? But I woke up this morning determined to get this out of the way.
+
+So, what've I done the last 2 weeks? Well for Week 13, I wasn't ready by the end of Monday with my code - I got it checked in on [Christmas Eve](https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a), one day late for my Monday deadline. I added a fairly basic widget to [What's Shaking, NZ?](https://play.google.com/store/apps/details?id=speakman.whatsshakingnz) - it shows the magnitude, depth and time of the latest earthquake. This would've been in earlier, except I had [some trouble](http://stackoverflow.com/questions/20752788/android-widget-wont-switch-layouts-more-than-once) getting it to do what I wanted when the user turned the background service off, as well as a bit of messing around getting the sizing right across devices. I'm actually a lot happier with the code in the final solution, so while it was frustrating at the time I'm almost glad I encountered that problem. Certainly I'll know for next time!
+
+Speaking of next time - Week 14! I've started work on the "global" version of What's Shaking?, which is coming along nicely. I think I'll count my current progress (which is downloading earthquakes from USGS, storing them locally rather than in-memory like WSNZ, and displaying them in a list from the database) as a "Thing". It is technically usable, and I feel it's a good base to build a much nicer app on top of, though that'll take a bit of time. I've been writing it in Android Studio too, which is really nice - and seems to now be stable enough to use, I've had no troubles with it. I feel that this new version can be a much better application than WSNZ; I have (literally) years of experience that I didn't have when I first started WSNZ.
+
+Additionally, I've [finally added](https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485) a proper open-source licenses page to WSNZ - using the sample license page code I released a few weeks ago! Hurray! Unfortunately, I can't release this update (with the widget and licenses page) as I can't get Eclipse to export a signed APK. I'm certainly [not the only one](http://stackoverflow.com/questions/2680827/conversion-to-dalvik-format-failed-with-error-1-on-external-jar) with this problem, but I've spent the last hour fighting Eclipse to build a release APK and it simply refuses. Hearthstone time, then. 'Til next week!
