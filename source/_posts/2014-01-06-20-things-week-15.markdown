@@ -1,0 +1,18 @@
+---
+layout: post
+title: "20 Things, Week 15"
+date: 2014-01-06 18:06
+comments: true
+categories: 20-things-20-weeks
+---
+
+I checked in some code every day this week. That being said, I don't really have a 'Thing' that I've done. Turns out that I'm running out of ideas for small, week-long projects. My plan to do some small things and even a bigger project over my 2 week break didn't work out so well - Christmas takes up a _lot_ of time, and there was plenty of other things to do in my time off, too.
+
+So while I haven't done any one thing worthy of note, some of the stuff I _have_ done (these are mostly quite trivial):
+
+- Implemented [PullToRefresh](https://github.com/chrisbanes/ActionBar-PullToRefresh) library
+- Implemented the [Crouton](https://github.com/keyboardsurfer/Crouton) library for toasts
+- Decided that loading 1000+ items with ORMLite to back a `ListView` was _not_ a good idea and actually got around to writing the plumbing code to use a `Cursor`
+- Added a check for 'last checked date' so we now query for the smallest number of quakes
+
+[{% img bottom /images/20-things/week_15.PNG %}](/images/20-things/week_15.PNG)
