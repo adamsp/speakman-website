@@ -1,0 +1,19 @@
+---
+layout: post
+title: "20 Things, Week 16"
+date: 2014-01-14 06:44
+comments: true
+categories: 20-things-20-weeks
+---
+
+I had my first open-source [pull request merged](https://github.com/codazzo/dogr/pull/2) this week, into [Dogr.io](http://dogr.io).
+
+[{% img /images/20-things/week_16.jpeg %}](/images/20-things/week_16.jpeg)
+
+<!-- more -->
+
+This was actually a bit of a pain - I've never used Node before, and some of the dependencies for this app were a bit of trouble. I had to have a certain Visual Studio & Windows SDK installation on my Windows machine, so rather than bother with that I tried it on my Macbook, where an old installation of Macports got in the way. Eventually everything was there, and then Node was _easy_. Would like to play with it more in future.
+
+The problem I was having with OkHttp a few weeks back might finally be about to be resolved - [I got a reply from Jesse from Square](http://stackoverflow.com/a/21078780/1217087), though the fix that he's implemented doesn't actually solve my problem. It's blocking on the `InputStream.read()` call, and the timeout check comes after this has returned.
+
+Finally, something else I've managed this week is to continue checking something in to Github every day - am up to an 18 day streak with this post.
