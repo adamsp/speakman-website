@@ -10,3 +10,5 @@ This week I finally got around to doing something I've wanted to do for a while;
 Unfortunately, it doesn't work. At all. In fact, the more I look into it, the worse I fear it is. I've attempted this before, but I struck a minor obstacle with some Python syntax and did something else instead; this time, I've got the entire algorithm worked out and developed. There's just some fairly significant logic bug(s) that're causing problems. Re-reading the code, there's also quite a bit of that which could do with a rewrite.
 
 No matter! I'm pretty happy I got the majority of the work done, and I'll keep working on it - a bit of refactoring should hopefully make the logical errors a bit more obvious.
+
+**Edit (Jan 21 2014):** [Fixed](https://github.com/adamsp/sudoku-solver/commit/25ab39bbd69b57be2626876d447ea7a6eceb5797).
