@@ -1,0 +1,15 @@
+---
+layout: post
+title: "20 Things, Week 18"
+date: 2014-01-27 17:36
+comments: true
+categories: 20-things-20-weeks
+---
+
+[Last week](/blog/2014/01/20/20-things-week-17/) I wrote a [Sudoku solver script](https://github.com/adamsp/sudoku-solver) in Python. That was fun and all, but as my girlfriend pointed out - it's not really usable for, er, well, most people. So this week I decided to make it a bit more versatile and build it into a service, with a website to go with it. It's currently [up on Github](https://github.com/adamsp/sudoku-solver-gae) and once I've added some polish to the website (heh, it's pretty awful right now) I'll get it up on App Engine.
+
+<!-- more -->
+
+Since this is week 18, and I'm nearly at the end of the 20 Things, 20 Weeks project, I've counted up the number of distinct "things" I've done. I'll do a full recap at the end of the 20 Weeks, but for now, I'm at 17/18 "things", if I count my partially-working Twitter client, and even at 18/18 if I count the time I spent working on [figuring out the KitKat Twitter streaming bug](http://stackoverflow.com/q/20306498/1217087) (which I still haven't solved). That's a **lot** better than I thought I was doing - I thought I was 4 or 5 behind.
+
+Also, I've managed to keep that Github streak going - now at 31 days!
