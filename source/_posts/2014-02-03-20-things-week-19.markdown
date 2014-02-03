@@ -1,0 +1,9 @@
+---
+layout: post
+title: "20 Things, Week 19"
+date: 2014-02-03 19:09
+comments: true
+categories: 20-things-20-weeks
+---
+
+Broke my Github streak this week, at 31 days - in fact, I didn't get any programming done this week. My partner and I left Auckland on Wednesday afternoon and didn't arrive home until late Sunday evening. We travelled around the Coromandel peninsula and spent time climbing mountains, visiting beaches, doing touristy things - and we got engaged! I'd say that that's a pretty good excuse for missing a week.
