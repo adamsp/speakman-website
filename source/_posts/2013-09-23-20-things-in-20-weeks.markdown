@@ -39,13 +39,13 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 5. Text based Twitter client (Yatta - Yet another text-based Twitter app) designed specifically for not consuming much data - no pictures, manual refresh only, no link auto-expansion (Twitter might do this for you?…) etc
 
-6. A Pinterest-style Android list view, implemented properly so you just attach a ListAdapter and you're away
+6. A Pinterest-style Android list view, implemented properly so you just attach a ListAdapter and you're away (Attempted - [Blog](../../../10/07/20-things-week-2/) - Etsy have [built a _far_ superior one](https://github.com/etsy/AndroidStaggeredGrid) though, so I doubt I'll ever touch this again)
 
 7. LeapMotion Windows controller to maximise/minimise/move windows left/right
 
-8. Add a widget to Whats Shaking, NZ?
+8. Add a widget to Whats Shaking, NZ? ([Blog](../../../../2014/01/01/20-things-weeks-13-and-14/), [Github](https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a))
 
-9. Sudoku solver (in Python?)
+9. Sudoku solver (in Python?) ([Blog](http://speakman.dev/blog/2014/01/20/20-things-week-17/), [Github](https://github.com/adamsp/sudoku-solver), and even a [Google App Engine implementation](https://github.com/adamsp/sudoku-solver-gae)!)
  
 10. Currency formatter class/tests/examples/blog posts ([Blog post](../../../10/21/android-currency-localisation-hell/), [Github](https://github.com/adamsp/CurrencyFormattingDemo))
 
@@ -55,7 +55,7 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 13. What's Shaking, NZ? for iOS (partly written already)
 
-14. Figure out how to fix the Twitter plugin on the side of this website.
+14. Figure out how to fix the Twitter plugin on the side of this website. ('Fixed' it by [deleting it](https://github.com/adamsp/speakman-website/commit/7b87a9597e0505c668bd65a4114b3009452fc2d9) - updated the theme at the same time, woo!)
 
 15. CV/Resume app, with my work history, links to profiles, Twitter stream, G+ stream, etc
 
@@ -67,15 +67,15 @@ I've written up a quick list of ideas of Things I can do over this time. This li
 
 19. Time localisation differences for Samsung (and other?…) devices examples + blog post
 
-20. <del>Wedding website for my friends Michael and Rebecca</del>
+20. <del>Wedding website for my friends Michael and Rebecca</del> (Oops, they got married!)
 
-21. Create a ‘global’ version of WSNZ + use Gson instead of manual parsing
+21. Create a ‘global’ version of WSNZ + use Gson instead of manual parsing (Started - [Blog](../../../../2014/01/01/20-things-weeks-13-and-14/), [Github](https://github.com/adamsp/WhatsShaking))
 
 22. Open source Android app licenses page example - Settings app page comes from a file and that file is created during build - what about one-person apps where your build process is File -> Export? ([Blog post](../../24/android-open-source-licenses-page/), [Github](https://github.com/adamsp/AndroidLicensesPage))
 
 23. A social network specifically for sharing cat pictures, because cats are awesome.
 
-24. A class for parsing WCF formatted DateTime objects in Java - [Gist](https://gist.github.com/adamsp/6914482).
+24. A class for parsing WCF formatted DateTime objects in Java ([Blog](../../../10/14/20-things-week-3/), [Gist](https://gist.github.com/adamsp/6914482)).
 
-25. Twitter-feed Android Daydream, “Dream In Tweets” - [Play Store](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets), [Github](https://github.com/adamsp/DreamInTweets)
+25. Twitter-feed Android Daydream, “Dream In Tweets” ([Play Store](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets), [launch blog entry](../../../10/28/20-things-week-5/), [chasing down KitKat bugs blog entry](../../../12/02/20-things-week-10/), and [still chasing down KitKat bugs blog entry](../../../12/09/20-things-week-11/), [Github](https://github.com/adamsp/DreamInTweets))
 
