@@ -1,0 +1,65 @@
+---
+layout: post
+title: "20 Things, Week 20"
+date: 2014-02-11 19:12
+comments: true
+categories: 20-things-20-weeks
+---
+
+Week 20 of my [20 Things in 20 Weeks](../../../../2013/09/23/20-things-in-20-weeks/) project. I've finally made it. So, how did I do?
+
+<!-- more -->
+
+First, what did I do this week just gone? Well, since I missed week 19 I needed to get 2 things done - and, well, I guess I got two, though they're both fairly minor.
+
+The first Thing I did this week was write up a [shell script](https://gist.github.com/adamsp/8930095) for generating and publishing this website, and adding, committing and pushing any new files to git, all in one command. I realised I needed this as I've been typing the exact same 5 commands over the last 20 weeks every time I wanted to do a new post. Now, all I do is type `./update.sh 20 Things Week 20` and it does it all for me. Sorted.
+
+This weeks second Thing was a side effect of a continuation of a previous Thing - I was looking into responding to Jesse on [this question](http://stackoverflow.com/q/20306498/1217087) about the streaming issues I'm having for my Twitter Daydream, when I stumbled across another issue in OkHttp. I fixed it and sent a [pull request](https://github.com/square/okhttp/pull/513) - it was a minor fix, but still, I think it counts!
+
+So with this final week out of the way, how have I done overall?
+
+There were a total of 4 weeks where I didn't get any Things done, with 3 weeks where I got 2 Things done, leaving me 1 Thing short of 20. Considering the amount of time I spent chasing down the streaming bug for Android 4.4 though, I may as well consider that a Thing - which gives me my 20!
+
+Some of my highlights from the last 20 weeks include:
+
+- the [Sudoku solver](https://github.com/adamsp/sudoku-solver), I really enjoyed making that - even though I'm sure my Python is pretty awful
+- the [Android Open Source Licenses page](https://github.com/adamsp/AndroidLicensesPage) is now being used in the [Rdio app](https://play.google.com/store/apps/details?id=com.rdio.android.ui), which is pretty awesome
+- getting engaged!
+- achieving a 31 day commit streak on Github
+
+[{% img /images/20-things/week_20.PNG %}](/images/20-things/week_20.PNG)
+
+And some of the things I've learned:
+
+- It's good to sit down and spend a few hours writing when you've solved a tricky problem; you'll thank yourself later when you need to remember why you wrote things that way!
+- Some of the [initial projects](../../../../2013/09/23/20-things-in-20-weeks/) I envisaged were _far_ too large for the timespan I gave myself - a project a month might've been more feasible. Realising how much work they were (and how little time I realistically had) put me off attempting a few of the bigger projects.
+- If you work at doing a little bit every day, things come together reasonably quickly.
+- Sometimes I just don't feel like writing code, and that's OK - you don't have to be productive every day.
+- The best way to learn new things continues to be jumping in and giving it a go; even if you make something that's been done before, at least you'll learn something new!
+
+Going forward, I'd like to complete a few of the projects I've started. What I really want to work on is my Twitter client - it's something I've wanted to make for a long time, and I've got in mind exactly how I'd like it to work. I'd like to finally fix the bug in my Android Daydream and get it working on KitKat, as well as adding some animations to it and some extra features around viewing images. And I'd like to finish the global version of What's Shaking, seeing as I've already spent a fair bit of time on it.
+
+Overall this has been a great experience. I've learned a lot about things I may never have bothered looking into. I've gained some great habits, both around writing blogs (it doesn't have to be perfect, and probably no one's going to read it except you anyway, so just write it) and around writing code (similarly, code doesn't have to be perfect to go on Github - and if you've got an idea, just get started on it!). I expect there'll be a lot more activity on here in the future, as I figure out solutions to the problems I come across, and make awesome (and not-so-awesome) new Things!
+
+All 20 Things, by week:
+
+1. [Android Open Source Licenses page](../../../../2013/09/24/android-open-source-licenses-page/) ([Github](https://github.com/adamsp/AndroidLicensesPage))
+2. Attempt at a multi-column list view. This never made it online, and recently [Etsy released a _much_ better one](https://github.com/etsy/AndroidStaggeredGrid).
+3. Parsing [WCF serialized DateTime JSON objects in Java](https://gist.github.com/adamsp/6914482), started Feather Twitter client (2 things this week!)
+4. Android Currency Localisation [blog post](../../../../2013/10/21/android-currency-localisation-hell/) + [demo code](https://github.com/adamsp/CurrencyFormattingDemo)
+5. [Dream In Tweets Daydream](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets) ([Github](https://github.com/adamsp/DreamInTweets))
+6. Updated blog theme, implemented working Share buttons
+7. OutOfMemoryError handling for large bitmaps on Android [blog post](../../../../2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/)
+8. &#45;
+9. [Getting started with Volley](../../../../2013/11/25/getting-started-with-volley-for-android/) blog post
+10. A lot of time spent looking into the Daydream 4.4 bug, including a detailed [post on StackOverflow](http://stackoverflow.com/q/20306498/1217087)
+11. &#45; (more looking into the 4.4 bug)
+12. [UTF-8 Byte-Order-Mark/JSON parsing](../../../../2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/) blog post
+13. Implemented a basic [What's Shaking, NZ? widget](https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a)
+14. Finally [added an Open Source licenses page](https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485) to What's Shaking, NZ?, and started work on a [What's Shaking global app](https://github.com/adamsp/WhatsShaking) (2 things!)
+15. Assorted minor things, started Github commit streak
+16. Sent a pull request to [fix spatial alignment](https://github.com/codazzo/dogr/pull/2) on the Dogr.io site
+17. Implemented a [Sudoku solver Python script](https://github.com/adamsp/sudoku-solver)
+18. Took that script, and made it into a [Sudoku solver service & website](https://github.com/adamsp/sudoku-solver-gae) running on Google App Engine
+19. &#45; (on holiday, and I got engaged - does that count as a thing?)
+20. Implemented a script to [publish website updates with one command](https://gist.github.com/adamsp/8930095), and sent a pull request with a [null pointer fix](https://github.com/square/okhttp/pull/513) for Square's OkHttp (2 things!)
