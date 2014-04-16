@@ -54,7 +54,7 @@ You can send these with a priority (by overriding `getPriority()`), so that high
 Before we can use a queue, we have to set one up. This should done as a singleton. Since the easiest way of creating a `RequestQueue` requires a `Context`, you can either subclass `Application` (which the official docs advise against) or do it this way:
 
 ``` java VolleyProvider.java
-public VolleyProvider {
+public class VolleyProvider {
     private static RequestQueue queue = null;
     
     private VolleyProvider() { }
@@ -246,7 +246,7 @@ Request request = new GsonRequest<T>(Method.POST, url, body, Person.class, new L
 Loading images with Volley is one of my favourite features of the library. Once it's setup, it's really easy to use. It handles loading images off the UI thread, can show a default image and an error one, and handles caching all for you. You need to set up an `ImageLoader`, similar to how you set up the `RequestQueue` as a singleton:
 
 ``` java ImageLoaderProvider.java
-public ImageLoaderProvider {
+public class ImageLoaderProvider {
     private static ImageLoader imageLoader = null;
     
     private ImageLoaderProvider() { }
