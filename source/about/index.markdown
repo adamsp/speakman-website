@@ -6,8 +6,4 @@ sharing: false
 footer: true
 ---
 
-I'm a software developer living in Auckland, New Zealand. I'm currently with [Vista](http://www.vista.co.nz) developing desktop and mobile applications for cinemas around the world. The main product I work on is our Android app, used for purchasing tickets at cinemas around the world.
-
-Apart from Android, I also have experience (both through Vista and through my work with [Pingar](http://pingar.com)) in iOS development, WCF services, text analytics and Hadoop on Amazon Elastic MapReduce, among other things.
-
-My partner and I are planning a move to Toronto in early 2014. If you’re looking for an Android developer in Toronto, please [get in touch](mailto:adam@speakman.net.nz) for more information, or you can find me on the social media linked above.
+I'm originally from New Zealand, but recently moved to Waterloo, Ontario. I'm the Engineering Lead at [Bridgit](http://gobridgit.com) where I manage a team of talented devs building a product for a diverse and often atypical user-base. It's challenging and rewarding work - if you're interested in joining us, check out our [careers page](http://gobridgit.com/company/#careers) for openings.
