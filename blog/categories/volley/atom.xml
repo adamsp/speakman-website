@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: volley | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/volley/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2015-01-20T10:00:21-05:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
+    <updated>2013-11-25T17:55:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
+    <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
+
+<!-- more -->
+
+
+<p></p>
+
+<h2>Getting the library</h2>
+
+<p>I’ll assume you have <a href="http://git-scm.com/">git</a> and <a href="http://ant.apache.org/">ant</a> installed.</p>
+
+<p>First, we have to get the library:</p>
+
+<p><code>
+git clone https://android.googlesource.com/platform/frameworks/volley
+</code></p>
+
+<p>Now we have the source code, we need to build it:</p>
+
+<p><code>
+cd volley
+ant jar
+</code></p>
+
+<p>Now, we have <code>volley.jar</code> in the <code>bin</code> directory. Copy this into <code>libs</code> in Eclipse (via drag &amp; drop through the GUI so it sets everything up properly) or set it up in your <code>build.gradle</code> if you’re using Studio. Wonderful.</p>
+
+<h2>Some basic setup</h2>
+
+<p>Volley works by sending requests to a <code>RequestQueue</code>. To create one of these requests, you override the <code>Request</code> object and implement a few methods:</p>
+
+<p>``` java
+queue.add(new Request<String>(Method.GET, url, errorListener) {</p>
+
+<pre><code>@Override
+protected Response&lt;String&gt; parseNetworkResponse(NetworkResponse response) {
+    // TODO Auto-generated method stub
+    return null;
+}
+
+@Override
+protected void deliverResponse(String response) {
+    // TODO Auto-generated method stub
+
+}});
+</code></pre>
+
+<p>```</p>
+
+<p>You can send these with a priority (by overriding <code>getPriority()</code>), so that higher priority requests get sent to the front of the queue, not the back. Useful if, for example, you’re loading some images in the background, but the user clicks on something that needs immediate download.</p>
+
+<p>Before we can use a queue, we have to set one up. This should done as a singleton. Since the easiest way of creating a <code>RequestQueue</code> requires a <code>Context</code>, you can either subclass <code>Application</code> (which the official docs advise against) or do it this way:</p>
+
+<p>``` java VolleyProvider.java
+public class VolleyProvider {</p>
+
+<pre><code>private static RequestQueue queue = null;
+
+private VolleyProvider() { }
+
+public static synchronized RequestQueue getQueue(Context ctx) {
+    if (queue == null) {
+        queue = Volley.newRequestQueue(ctx.getApplicationContext());
+    }
+    return queue;
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>And usage:</p>
+
+<p><code>java
+RequestQueue queue = VolleyProvider.getQueue(mContext);
+</code></p>
+
+<p>There are a few other ways of constructing a queue, allowing you to specify your own HTTP stack, cache, thread pool size, etc.</p>
+
+<h2>Now let’s GET some JSON</h2>
+
+<p>So now we've got our default queue set up, we can send a request. As you saw earlier, a request requires you to implement two methods - <code>parseNetworkResponse</code> and <code>deliverResponse</code>. The first of these methods parses your network response into some object that you're expecting, <strong>from a worker thread</strong>. The second delivers that response back to your UI thread, <strong>unless <code>parseNetworkResponse</code> returns <code>null</code></strong>.</p>
+
+<p>To fetch some simple JSON back from a given URL, there's a convenient utility class that comes packaged in <code>com.android.volley.toolbox</code> called <code>JsonRequest</code>.</p>
+
+<p>This class manages parsing any request body string into a byte array (the <code>getBody</code> method returns a <code>byte[]</code>), as well as specifying the content type headers, etc. You still have to implement the <code>parseNetworkResponse</code> abstract method from before, though you now supply a listener for the success case instead of an override. So now our request looks a bit like this (using <a href="https://code.google.com/p/google-gson/">Gson</a> for parsing the response, because it's awesome):</p>
+
+<p>``` java
+public class Person {</p>
+
+<pre><code>long id;
+String firstName;
+String lastName;
+String address;
+</code></pre>
+
+<p>}</p>
+
+<p>...</p>
+
+<p>String url = "http://person.com/person?id=1234";
+Request request = new JsonRequest<Person>(Method.GET, url, null, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>}) {</p>
+
+<pre><code>@Override
+protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
+    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
+    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
+    return result;
+}
+</code></pre>
+
+<p>};
+queue.add(request);
+```</p>
+
+<h2>And POST some back to the server</h2>
+
+<p>POSTing JSON back is equally as easy! Instead of passing in null for our body, we pass in a JSON String.</p>
+
+<p>``` java
+String url = "http://person.com/person/update?id=1234";
+String body = new GsonBuilder().create().toJson(somePerson);
+Request request = new JsonRequest<Person>(Method.POST, url, body, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>}) {</p>
+
+<pre><code>@Override
+protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
+    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
+    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
+    return result;
+}
+</code></pre>
+
+<p>};
+```</p>
+
+<h2>Is there an easier way?</h2>
+
+<p>Sort-of. I've abstracted the JSON parsing out so you only have to handle the success and the failure cases. If you've got more complex objects that need custom type adapters, you could put the Gson object creation and type adapter registration into another class somewhere and call it from here. Just drop this <code>GsonRequest</code> class in and you can use it by simply passing in the class of object you expect, as follows.</p>
+
+<p>``` java GsonRequest.java https://gist.github.com/adamsp/7637132
+/<em>*
+ * Copyright 2013 Adam Speakman
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ </em>/
+package your.package.here;</p>
+
+<p>import java.io.UnsupportedEncodingException;</p>
+
+<p>import com.android.volley.NetworkResponse;
+import com.android.volley.ParseError;
+import com.android.volley.Response;
+import com.android.volley.Response.ErrorListener;
+import com.android.volley.Response.Listener;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.JsonRequest;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;</p>
+
+<p>public class GsonRequest<T> extends JsonRequest<T> {</p>
+
+<pre><code>Class&lt;T&gt; mResponseClass;
+
+public GsonRequest(int method, String url, String requestBody, Class&lt;T&gt; responseClass, Listener&lt;T&gt; listener,
+        ErrorListener errorListener) {
+    super(method, url, requestBody, listener, errorListener);
+    mResponseClass = responseClass;
+    // Do some generic stuff in here - for example, set your retry policy to
+    // longer if you know all your requests are going to take &gt; 2.5 seconds
+    // etc etc...
+}
+
+@Override
+protected Response&lt;T&gt; parseNetworkResponse(NetworkResponse networkResponse) {
+    try {
+        String jsonString = new String(networkResponse.data, HttpHeaderParser.parseCharset(networkResponse.headers));
+        T response = new GsonBuilder().create().fromJson(jsonString, mResponseClass);
+        com.android.volley.Response&lt;T&gt; result = com.android.volley.Response.success(response,
+                HttpHeaderParser.parseCacheHeaders(networkResponse));
+        return result;
+    } catch (UnsupportedEncodingException e) {
+        return com.android.volley.Response.error(new ParseError(e));
+    } catch (JsonSyntaxException e) {
+        return com.android.volley.Response.error(new ParseError(e));
+    }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>```</p>
+
+<p>And usage:</p>
+
+<p>``` java
+Request request = new GsonRequest<T>(Method.POST, url, body, Person.class, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>});
+```</p>
+
+<h2>What about that easy image loading?</h2>
+
+<p>Loading images with Volley is one of my favourite features of the library. Once it's setup, it's really easy to use. It handles loading images off the UI thread, can show a default image and an error one, and handles caching all for you. You need to set up an <code>ImageLoader</code>, similar to how you set up the <code>RequestQueue</code> as a singleton:</p>
+
+<p>``` java ImageLoaderProvider.java
+public class ImageLoaderProvider {</p>
+
+<pre><code>private static ImageLoader imageLoader = null;
+
+private ImageLoaderProvider() { }
+
+public static synchronized ImageLoader getImageLoader(Context ctx, RequestQueue queue) {
+    if (imageLoader == null) {
+        imageLoader = new ImageLoader(queue, new LruBitmapCache(getCacheSize(ctx)));
+    }
+    return imageLoader;
+}
+
+/**
+ * Returns a cache size equal to approximately three screens worth of images.
+ */
+private int getCacheSize(Context ctx) {
+    final DisplayMetrics displayMetrics = ctx.getResources().getDisplayMetrics();
+    final int screenWidth = displayMetrics.widthPixels;
+    final int screenHeight = displayMetrics.heightPixels;
+    final int screenBytes = screenWidth * screenHeight * 4; // 4 bytes per pixel
+
+    return screenBytes * 3;
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Now, replace your <code>ImageView</code> objects with <code>NetworkImageView</code> ones:</p>
+
+<p>``` xml</p>
+
+<pre><code>&lt;com.android.volley.toolbox.NetworkImageView
+    android:id="@+id/some_image"
+    ... /&gt;
+</code></pre>
+
+<p>```</p>
+
+<p>And finally, all you need to do is pass your <code>NetworkImageView</code> the URL of the image you'd like loaded, and the <code>ImageLoader</code>:</p>
+
+<p><code>java
+ImageLoader imageLoader = ImageLoaderProvider.getImageLoader(mContext, VolleyProvider.getQueue(mContext));
+((NetworkImageView)findViewById(R.id.some_image)).setImageUrl(imgUrl, imageLoader);
+</code></p>
+
+<p>There are also methods available such as <code>setDefaultImageResId</code> and <code>setErrorImageResId</code>, for supplying default and error resources.</p>
+
+<h2>Anything else?</h2>
+
+<p>Volley has a default TTL on requests of 2.5 seconds - after this, it'll retry the request. This can result in some unexpected behaviour - for example where your error listener gets called (immediately after the retry), then your success listener gets called a little while later (when the original request returns). You can fix this by specifying a timeout in your request:</p>
+
+<p><code>java
+public static final int REQUEST_TIMEOUT_MS = 10000;
+...
+request.setRetryPolicy(new DefaultRetryPolicy(REQUEST_TIMEOUT_MS, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+</code></p>
+
+<p>Another thing to be aware of is that the image loading will cache images in the full size they come down as. This means if you’re downloading images at full resolution but only displaying them at a much smaller one, you’re going to be caching them at full res. If this is in a list view, you’re going to be pushing stuff out of the cache (and then re-downloading them) a lot more often than desirable.</p>
+
+<p>You can get around this by changing some code in <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java"><code>NetworkImageView</code></a>. The important bit is near the end of the <code>loadImageIfNecessary(final boolean isInLayoutPass)</code> method. The code makes a call to the following method in the <code>ImageLoader</code> class:</p>
+
+<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
+public ImageContainer get(String requestUrl, final ImageListener listener) {</p>
+
+<pre><code>return get(requestUrl, listener, 0, 0);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Notice how that calls an overload that takes some <code>int</code> values?</p>
+
+<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
+public ImageContainer get(String requestUrl, ImageListener imageListener,</p>
+
+<pre><code>        int maxWidth, int maxHeight) {
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Well, if we ‘fix’ the code back in <code>NetworkImageView</code> to pass in the width &amp; height of the view, then the image gets scaled down and cached at the smaller size (this takes is utilised in the <code>doParse</code> method of <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageRequest.java"><code>ImageRequest</code></a>:</p>
+
+<p>``` java NetworkImageLoader.java
+ImageContainer newContainer = mImageLoader.get(mUrl,</p>
+
+<pre><code>new ImageListener() {
+    ...
+},
+getMeasuredWidth(),
+getMeasuredHeight());
+</code></pre>
+
+<p>```</p>
+
+<p>Note that if you pass the image URL in for use in a different place, <strong>it’ll use the (scaled down) image from the cache</strong> - so if you need the full resolution image, this solution will need some modification.</p>
+
+<h2>Wow, Volley can do lots of stuff!</h2>
+
+<p>And I certainly haven't covered all of it here. There's loads more that it can do. I'd recommend looking through some of the classes in <code>com.android.volley.toolbox</code> to see what else is already written for you, and for some ideas of how to use some of the other cool features it has to offer.</p>
+]]></content>
+  </entry>
+  
+</feed>

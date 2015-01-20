@@ -1,0 +1,1510 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2015-01-20T10:00:21-05:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration/"/>
+    <updated>2014-02-20T21:25:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration</id>
+    <content type="html"><![CDATA[<p>Ever used a <a href="https://developer.android.com/reference/android/support/v4/app/FragmentStatePagerAdapter.html"><code>FragmentStatePagerAdapter</code></a>? We&#8217;re using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress to the next page once they&#8217;ve completed the current one. We control this by manipulating the stack of pages and notifying the adapter that the data has changed when a new page is available.</p>
+
+<p>Unfortunately, when changing pages that have already been loaded, there&#8217;s an unexpected bug. Specifically, when you load a page, remove it and then insert a new one in its place, the next time the fragment at that index is loaded, it receives the <code>savedInstanceState</code> bundle for the <em>old</em> fragment.</p>
+
+<!-- more -->
+
+
+<h1>How&#8217;d you find <em>that</em>?</h1>
+
+<p>The specific use case where I discovered this was the case where a customer is purchasing tickets to a film, and they change their mind about which type of tickets they want.</p>
+
+<p>First, the customer selects tickets that require manually selected seats. We save the tickets, receive the seating data, and send the customer to the next page where they can select from a seat in a map.</p>
+
+<p>If the customer changes their mind at this stage and returns to the previous page, as soon as they make a change to their selected tickets we consider all future pages invalid. We &#8216;remove&#8217; the seat selection fragment and notify the adapter. If the customer has now selected tickets that <em>don&#8217;t</em> require manual seat selection (that is, they&#8217;ve chosen tickets for an unallocated seating area), we save the tickets, receive empty seating data, and know to send them on to the &#8220;details&#8221; page where they can enter in their name and email.</p>
+
+<p>This is where the process breaks down. Since the two fragments are different (one&#8217;s called <code>SeatingFragment</code> and the other is <code>CustomerDetailsFragment</code>, say), I wasn&#8217;t expecting to receive any saved instance state on the first load of the new fragment - however I was getting state passed in! This caused a crash, as I was depending on the state being null to assume first-load.</p>
+
+<p>The state I was seeing was the state for the previously loaded fragment at that index. That is, when the <code>CustomerDetailsFragment</code> in the example scenario was loaded (replacing the <code>SeatingFragment</code>), it was receiving the saved state bundle for the <code>SeatingFragment</code>, when it should&#8217;ve been receiving no saved state bundle at all.</p>
+
+<h1>Can you reproduce it?</h1>
+
+<p>I&#8217;ve written a <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">very simple example app</a> which shows this behaviour. If you swipe backwards and forwards you can see the fragments labeled &#8220;1&#8221;, &#8220;2&#8221;, &#8220;3&#8221;, colored Red, Yellow and Green. Now, press the &#8216;Switch Fragment&#8217; button. You&#8217;ll be sent back to index 0 (fragment &#8220;1&#8221;). This forces the removal of fragment &#8220;3&#8221;, which gets its state saved. But we&#8217;ve changed the content of the adapter - so next time you load fragment &#8220;3&#8221;, you&#8217;ll see that its color has changed to Blue. <strong>This is a different fragment</strong>, but it&#8217;s label has been restored from the previous fragments saved state! If you rotate your device, or simply swipe back to the first view and then back to the third again, you&#8217;ll see the correct label of &#8220;4&#8221; (it saves the state fresh when it removes it, resulting in the correct saved state next time it&#8217;s loaded).</p>
+
+<h1>Why does this occur?</h1>
+
+<p>If we take a look at the source code <a href="https://android.googlesource.com/platform/frameworks/support/+/6d6186b9a2503200844febe1b8ba083206c7cbcd/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">as of this writing</a>, we can see that the <code>FragmentStatePagerAdapter</code> stores a list of states:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>private ArrayList&lt;Fragment.SavedState&gt; mSavedState = new ArrayList&lt;Fragment.SavedState&gt;();</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Looking through the code we can see that this array is used in four places. It&#8217;s used in <code>instantiateItem</code>, <code>destroyItem</code>, <code>saveState</code> and <code>restoreState</code>.  We can ignore <code>saveState</code> and <code>restoreState</code> for now, as they&#8217;re just saving the adapters overall state into an external bundle, and then loading it back up.</p>
+
+<p>First, let&#8217;s take a look at what&#8217;s going on in <code>destroyItem</code>. When a fragment is due to be destroyed, this method first starts a transaction (if one isn&#8217;t already started), then pads out the <code>mSavedState</code> array with null entries until it&#8217;s at least the size of the index of the fragment we&#8217;re removing.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public void destroyItem(ViewGroup container, int position, Object object) {
+</span><span class='line'>    Fragment fragment = (Fragment)object;
+</span><span class='line'>
+</span><span class='line'>    if (mCurTransaction == null) {
+</span><span class='line'>        mCurTransaction = mFragmentManager.beginTransaction();
+</span><span class='line'>    }
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+</span><span class='line'>            + " v=" + ((Fragment)object).getView());
+</span><span class='line'>    while (mSavedState.size() &lt;= position) {
+</span><span class='line'>        mSavedState.add(null);
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing too exciting there. It then saves the state of the fragment that is being removed into the corresponding index in the <code>mSavedState</code> list, and removes the fragment:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+</span><span class='line'>    mFragments.set(position, null);
+</span><span class='line'>
+</span><span class='line'>    mCurTransaction.remove(fragment);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now let&#8217;s see what happens in the other direction - instantiating an item. First thing to do is check and see if we already have a <code>Fragment</code> object created and stored at the given position. Short-circuit back out with this if we do:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public Object instantiateItem(ViewGroup container, int position) {
+</span><span class='line'>    // If we already have this item instantiated, there is nothing
+</span><span class='line'>    // to do.  This can happen when we are restoring the entire pager
+</span><span class='line'>    // from its saved state, where the fragment manager has already
+</span><span class='line'>    // taken care of restoring the fragments we previously had instantiated.
+</span><span class='line'>    if (mFragments.size() &gt; position) {
+</span><span class='line'>        Fragment f = mFragments.get(position);
+</span><span class='line'>        if (f != null) {
+</span><span class='line'>            return f;
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If however we <em>don&#8217;t</em> have a fragment there, we have to create one. This could be because we&#8217;ve never seen this page of the <code>ViewPager</code> before, or it could be because the page was removed due to the left/right limits (recall a <code>ViewPager</code> will only keep the first page to the left and right of the current one, by default).</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (mCurTransaction == null) {
+</span><span class='line'>        mCurTransaction = mFragmentManager.beginTransaction();
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>    Fragment fragment = getItem(position);
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, here&#8217;s the important part. After we&#8217;ve asked our concrete subclass to create/instantiate a fragment for us (through the <code>getItem(position)</code> call), we check to see if we have any saved state <em>at that position</em>. There&#8217;s the crucial part - we&#8217;re <strong>checking for saved state based on the fragments index in an array, rather than on some unique property of the fragment</strong>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (mSavedState.size() &gt; position) {
+</span><span class='line'>        Fragment.SavedState fss = mSavedState.get(position);
+</span><span class='line'>        if (fss != null) {
+</span><span class='line'>            fragment.setInitialSavedState(fss);
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The issue with this is that the fragment at that position may no longer be the same fragment as was there last time we displayed the page at this position! So that saved state bundle may no longer be the correct one.</p>
+
+<p>Finally, we add the fragment to our list of fragments and display it:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    while (mFragments.size() &lt;= position) {
+</span><span class='line'>        mFragments.add(null);
+</span><span class='line'>    }
+</span><span class='line'>    fragment.setMenuVisibility(false);
+</span><span class='line'>    fragment.setUserVisibleHint(false);
+</span><span class='line'>    mFragments.set(position, fragment);
+</span><span class='line'>    mCurTransaction.add(container.getId(), fragment);
+</span><span class='line'>
+</span><span class='line'>    return fragment;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Fixes or workarounds?</h1>
+
+<p>Luckily, there&#8217;s a way around this problem! Hurrah!</p>
+
+<p>We simply need some way of identifying the fragments, and comparing whether this identifying value is the same or not when we try to restore state to a freshly instantiated fragment. The best way to do this is to ask our concrete subclass for an identifier for this fragment - a tag.</p>
+
+<p>So, let&#8217;s copy the <a href="https://android.googlesource.com/platform/frameworks/support/+/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">entire source of <code>FragmentStatePagerAdapter</code></a> and get started. First thing to do is add a way of getting tags from our subclasses. Since we don&#8217;t want to break existing implementations that don&#8217;t actually care about swapping out fragments, we won&#8217;t make this method abstract. Instead it&#8217;ll just <code>return null;</code> by default, and we treat that as the default case, reproducing existing behaviour.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>public String getTag(int position) {
+</span><span class='line'>    return null;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ok, so now we have a way of getting the tags, let&#8217;s add an <code>ArrayList&lt;String&gt;</code> member variable to track our fragment tags:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>private ArrayList&lt;String&gt; mSavedFragmentTags = new ArrayList&lt;String&gt;();</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we go through and handle this in all 4 places where <code>mSavedState</code> is touched.</p>
+
+<p>In <code>instantiateItem</code> we must find the tag for the newly instantiated fragment first. Once we&#8217;ve got that, if we have saved state we can then compare this new tag with the saved tag. If they match, then we restore the state! If they don&#8217;t, then we don&#8217;t restore state. Easy.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    Fragment fragment = getItem(position);
+</span><span class='line'>    String fragmentTag = getTag(position);
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment + " t=" + fragmentTag);
+</span><span class='line'>    if (mSavedState.size() &gt; position) {
+</span><span class='line'>        String savedTag = mSavedFragmentTags.get(position);
+</span><span class='line'>        if (TextUtils.equals(fragmentTag, savedTag)) {
+</span><span class='line'>            Fragment.SavedState fss = mSavedState.get(position);
+</span><span class='line'>            if (fss != null) {
+</span><span class='line'>                fragment.setInitialSavedState(fss);
+</span><span class='line'>            }
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that we also add the fragment using the <a href="https://developer.android.com/reference/android/support/v4/app/FragmentTransaction.html#add(int,"><code>FragmentTransaction#add (int containerViewId, Fragment fragment, String tag)</code></a> signature - that is, we actually use the tag when adding our fragment:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mCurTransaction.add(container.getId(), fragment, fragmentTag);
+</span><span class='line'>
+</span><span class='line'>    return fragment;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In <code>destroyItem</code> we just mirror what&#8217;s done to <code>mSavedState</code>. We pad it out if necessary&#8230;</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+</span><span class='line'>            + " v=" + ((Fragment)object).getView() + " t=" + fragment.getTag());
+</span><span class='line'>    while (mSavedState.size() &lt;= position) {
+</span><span class='line'>        mSavedState.add(null);
+</span><span class='line'>        mSavedFragmentTags.add(null);
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>&#8230;then we save the tag at that location.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+</span><span class='line'>    mSavedFragmentTags.set(position, fragment.getTag());
+</span><span class='line'>    mFragments.set(position, null);
+</span><span class='line'>
+</span><span class='line'>    mCurTransaction.remove(fragment);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally we have the <code>saveState</code> and <code>restoreState</code> methods. These are pretty trival changes. In <code>saveState</code> we put the saved fragment tags into the <code>Bundle</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>state.putStringArrayList("tags", mSavedFragmentTags);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And then in <code>restoreState</code>, surprise, we restore the saved fragment tags from the bundle:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mSavedFragmentTags = bundle.getStringArrayList("tags");</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Two last things to do:</p>
+
+<ul>
+<li>Change your subclass to override your new, fixed, adapter (rather than the one in the support library)</li>
+<li>Remember to <strong>override <code>getTag(int position)</code></strong> to return a unique tag for each fragment</li>
+</ul>
+
+
+<p>If you forget either of these things, you&#8217;ll just have the same behaviour as before. In my <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">demo app</a>, this would look something like the following - obviously you&#8217;ll need to adjust this to suit your own data source:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public String getTag(int position) {
+</span><span class='line'>    return labels[position];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And that&#8217;s it! Those&#8217;re the changes we need to make to the <code>FragmentStatePagerAdapter</code> for it to stop misbehaving and restoring the wrong state to fragments in different locations.</p>
+
+<p>You can find a complete example of this fixed class <a href="https://github.com/adamsp/FragmentStatePagerIssueExample/blob/master/app/src/main/java/com/example/fragmentstatepagerissueexample/app/FixedFragmentStatePagerAdapter.java">in the sample project</a>. There&#8217;s some lines commented out in the adapter in <code>MainActivity</code>; just swap the class definition and uncomment the method and you&#8217;ve magically got an adapter working as expected!</p>
+
+<h1>That&#8217;s great! Any gotchas?</h1>
+
+<p>Sure are.</p>
+
+<ul>
+<li>Remember to override <code>getTag(int position)</code>, or else you&#8217;ll continue to see the old behaviour.</li>
+<li><code>getTag(int position)</code> must return a <em>unique</em> tag for each fragment.</li>
+<li>If your <code>FragmentStatePagerAdapter</code> is an inner class of a <code>Fragment</code>, <em>and</em> you&#8217;re calling that fragments <code>getTag()</code> method, then that call will now give a compile error. You&#8217;ll need to change it to <code>MyParentFragment.this.getTag()</code> instead, <em>or</em> change the fixed adapter to use a different method signature - <code>getFragmentTag(int position)</code>, perhaps.</li>
+<li>You won&#8217;t automatically receive bug fixes and updates to the <code>FragmentStatePagerAdapter</code> when the support library updates. This is unlikely to be an issue though - it&#8217;s been in source for <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">over 18 months as of this writing</a> (Feb 20, 2014) without a single change (the <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v13/java/android/support/v13/app/FragmentStatePagerAdapter.java">v13 version, too</a>).</li>
+<li>If you want to use a different key to put the saved tags into/restore from the bundle (other than just &#8220;tags&#8221; like I&#8217;ve used here), make sure it doesn&#8217;t start with &#8220;f&#8221; - note how a little further down in the <code>restoreState</code> method it checks for keys starting with &#8220;f&#8221; and assumes they&#8217;re fragments!</li>
+</ul>
+
+
+<h1>Thanks! You saved the day.</h1>
+
+<p>No worries! Maybe one day you&#8217;ll write a post on how to fix some obscure bug that I&#8217;m having trouble with.</p>
+
+<p>If you have any questions, you can ask me on <a href="https://twitter.com/adamsnz">Twitter</a>, or <a href="https://plus.google.com/+AdamSpeakman">Google+</a>, or open an issue on (or send a pull request to) the <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">Github project</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 20]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/11/20-things-week-20/"/>
+    <updated>2014-02-11T19:12:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/02/11/20-things-week-20</id>
+    <content type="html"><![CDATA[<p>Week 20 of my <a href="../../../../2013/09/23/20-things-in-20-weeks/">20 Things in 20 Weeks</a> project. I&#8217;ve finally made it. So, how did I do?</p>
+
+<!-- more -->
+
+
+<p>First, what did I do this week just gone? Well, since I missed week 19 I needed to get 2 things done - and, well, I guess I got two, though they&#8217;re both fairly minor.</p>
+
+<p>The first Thing I did this week was write up a <a href="https://gist.github.com/adamsp/8930095">shell script</a> for generating and publishing this website, and adding, committing and pushing any new files to git, all in one command. I realised I needed this as I&#8217;ve been typing the exact same 5 commands over the last 20 weeks every time I wanted to do a new post. Now, all I do is type <code>./update.sh 20 Things Week 20</code> and it does it all for me. Sorted.</p>
+
+<p>This weeks second Thing was a side effect of a continuation of a previous Thing - I was looking into responding to Jesse on <a href="http://stackoverflow.com/q/20306498/1217087">this question</a> about the streaming issues I&#8217;m having for my Twitter Daydream, when I stumbled across another issue in OkHttp. I fixed it and sent a <a href="https://github.com/square/okhttp/pull/513">pull request</a> - it was a minor fix, but still, I think it counts!</p>
+
+<p>So with this final week out of the way, how have I done overall?</p>
+
+<p>There were a total of 4 weeks where I didn&#8217;t get any Things done, with 3 weeks where I got 2 Things done, leaving me 1 Thing short of 20. Considering the amount of time I spent chasing down the streaming bug for Android 4.4 though, I may as well consider that a Thing - which gives me my 20!</p>
+
+<p>Some of my highlights from the last 20 weeks include:</p>
+
+<ul>
+<li>the <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver</a>, I really enjoyed making that - even though I&#8217;m sure my Python is pretty awful</li>
+<li>the <a href="https://github.com/adamsp/AndroidLicensesPage">Android Open Source Licenses page</a> is now being used in the <a href="https://play.google.com/store/apps/details?id=com.rdio.android.ui">Rdio app</a>, which is pretty awesome</li>
+<li>getting engaged!</li>
+<li>achieving a 31 day commit streak on Github</li>
+</ul>
+
+
+<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_20.PNG"><img src="http://adamsp.github.com/speakman-website/images/20-things/week_20.PNG"></a></p>
+
+<p>And some of the things I&#8217;ve learned:</p>
+
+<ul>
+<li>It&#8217;s good to sit down and spend a few hours writing when you&#8217;ve solved a tricky problem; you&#8217;ll thank yourself later when you need to remember why you wrote things that way!</li>
+<li>Some of the <a href="../../../../2013/09/23/20-things-in-20-weeks/">initial projects</a> I envisaged were <em>far</em> too large for the timespan I gave myself - a project a month might&#8217;ve been more feasible. Realising how much work they were (and how little time I realistically had) put me off attempting a few of the bigger projects.</li>
+<li>If you work at doing a little bit every day, things come together reasonably quickly.</li>
+<li>Sometimes I just don&#8217;t feel like writing code, and that&#8217;s OK - you don&#8217;t have to be productive every day.</li>
+<li>The best way to learn new things continues to be jumping in and giving it a go; even if you make something that&#8217;s been done before, at least you&#8217;ll learn something new!</li>
+</ul>
+
+
+<p>Going forward, I&#8217;d like to complete a few of the projects I&#8217;ve started. What I really want to work on is my Twitter client - it&#8217;s something I&#8217;ve wanted to make for a long time, and I&#8217;ve got in mind exactly how I&#8217;d like it to work. I&#8217;d like to finally fix the bug in my Android Daydream and get it working on KitKat, as well as adding some animations to it and some extra features around viewing images. And I&#8217;d like to finish the global version of What&#8217;s Shaking, seeing as I&#8217;ve already spent a fair bit of time on it.</p>
+
+<p>Overall this has been a great experience. I&#8217;ve learned a lot about things I may never have bothered looking into. I&#8217;ve gained some great habits, both around writing blogs (it doesn&#8217;t have to be perfect, and probably no one&#8217;s going to read it except you anyway, so just write it) and around writing code (similarly, code doesn&#8217;t have to be perfect to go on Github - and if you&#8217;ve got an idea, just get started on it!). I expect there&#8217;ll be a lot more activity on here in the future, as I figure out solutions to the problems I come across, and make awesome (and not-so-awesome) new Things!</p>
+
+<p>All 20 Things, by week:</p>
+
+<ol>
+<li><a href="../../../../2013/09/24/android-open-source-licenses-page/">Android Open Source Licenses page</a> (<a href="https://github.com/adamsp/AndroidLicensesPage">Github</a>)</li>
+<li>Attempt at a multi-column list view. This never made it online, and recently <a href="https://github.com/etsy/AndroidStaggeredGrid">Etsy released a <em>much</em> better one</a>.</li>
+<li>Parsing <a href="https://gist.github.com/adamsp/6914482">WCF serialized DateTime JSON objects in Java</a>, started Feather Twitter client (2 things this week!)</li>
+<li>Android Currency Localisation <a href="../../../../2013/10/21/android-currency-localisation-hell/">blog post</a> + <a href="https://github.com/adamsp/CurrencyFormattingDemo">demo code</a></li>
+<li><a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Dream In Tweets Daydream</a> (<a href="https://github.com/adamsp/DreamInTweets">Github</a>)</li>
+<li>Updated blog theme, implemented working Share buttons</li>
+<li>OutOfMemoryError handling for large bitmaps on Android <a href="../../../../2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">blog post</a></li>
+<li>&#45;</li>
+<li><a href="../../../../2013/11/25/getting-started-with-volley-for-android/">Getting started with Volley</a> blog post</li>
+<li>A lot of time spent looking into the Daydream 4.4 bug, including a detailed <a href="http://stackoverflow.com/q/20306498/1217087">post on StackOverflow</a></li>
+<li>&#45; (more looking into the 4.4 bug)</li>
+<li><a href="../../../../2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/">UTF-8 Byte-Order-Mark/JSON parsing</a> blog post</li>
+<li>Implemented a basic <a href="https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a">What&#8217;s Shaking, NZ? widget</a></li>
+<li>Finally <a href="https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485">added an Open Source licenses page</a> to What&#8217;s Shaking, NZ?, and started work on a <a href="https://github.com/adamsp/WhatsShaking">What&#8217;s Shaking global app</a> (2 things!)</li>
+<li>Assorted minor things, started Github commit streak</li>
+<li>Sent a pull request to <a href="https://github.com/codazzo/dogr/pull/2">fix spatial alignment</a> on the Dogr.io site</li>
+<li>Implemented a <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver Python script</a></li>
+<li>Took that script, and made it into a <a href="https://github.com/adamsp/sudoku-solver-gae">Sudoku solver service &amp; website</a> running on Google App Engine</li>
+<li>&#45; (on holiday, and I got engaged - does that count as a thing?)</li>
+<li>Implemented a script to <a href="https://gist.github.com/adamsp/8930095">publish website updates with one command</a>, and sent a pull request with a <a href="https://github.com/square/okhttp/pull/513">null pointer fix</a> for Square&#8217;s OkHttp (2 things!)</li>
+</ol>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 19]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/03/20-things-week-19/"/>
+    <updated>2014-02-03T19:09:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/02/03/20-things-week-19</id>
+    <content type="html"><![CDATA[<p>Broke my Github streak this week, at 31 days - in fact, I didn&#8217;t get any programming done this week. My partner and I left Auckland on Wednesday afternoon and didn&#8217;t arrive home until late Sunday evening. We travelled around the Coromandel peninsula and spent time climbing mountains, visiting beaches, doing touristy things - and we got engaged! I&#8217;d say that that&#8217;s a pretty good excuse for missing a week.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 18]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/27/20-things-week-18/"/>
+    <updated>2014-01-27T17:36:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/01/27/20-things-week-18</id>
+    <content type="html"><![CDATA[<p><a href="http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17/">Last week</a> I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver script</a> in Python. That was fun and all, but as my girlfriend pointed out - it&#8217;s not really usable for, er, well, most people. So this week I decided to make it a bit more versatile and build it into a service, with a website to go with it. It&#8217;s currently <a href="https://github.com/adamsp/sudoku-solver-gae">up on Github</a> and once I&#8217;ve added some polish to the website (heh, it&#8217;s pretty awful right now) I&#8217;ll get it up on App Engine.</p>
+
+<!-- more -->
+
+
+<p>Since this is week 18, and I&#8217;m nearly at the end of the 20 Things, 20 Weeks project, I&#8217;ve counted up the number of distinct &#8220;things&#8221; I&#8217;ve done. I&#8217;ll do a full recap at the end of the 20 Weeks, but for now, I&#8217;m at 17/18 &#8220;things&#8221;, if I count my partially-working Twitter client, and even at 18/18 if I count the time I spent working on <a href="http://stackoverflow.com/q/20306498/1217087">figuring out the KitKat Twitter streaming bug</a> (which I still haven&#8217;t solved). That&#8217;s a <strong>lot</strong> better than I thought I was doing - I thought I was 4 or 5 behind.</p>
+
+<p>Also, I&#8217;ve managed to keep that Github streak going - now at 31 days!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 17]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17/"/>
+    <updated>2014-01-20T20:06:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17</id>
+    <content type="html"><![CDATA[<p>This week I finally got around to doing something I&#8217;ve wanted to do for a while; I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku Solver in Python</a>.</p>
+
+<p>Unfortunately, it doesn&#8217;t work. At all. In fact, the more I look into it, the worse I fear it is. I&#8217;ve attempted this before, but I struck a minor obstacle with some Python syntax and did something else instead; this time, I&#8217;ve got the entire algorithm worked out and developed. There&#8217;s just some fairly significant logic bug(s) that&#8217;re causing problems. Re-reading the code, there&#8217;s also quite a bit of that which could do with a rewrite.</p>
+
+<p>No matter! I&#8217;m pretty happy I got the majority of the work done, and I&#8217;ll keep working on it - a bit of refactoring should hopefully make the logical errors a bit more obvious.</p>
+
+<p><strong>Edit (Jan 21 2014):</strong> <a href="https://github.com/adamsp/sudoku-solver/commit/25ab39bbd69b57be2626876d447ea7a6eceb5797">Fixed</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 16]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/14/20-things-week-16/"/>
+    <updated>2014-01-14T06:44:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/01/14/20-things-week-16</id>
+    <content type="html"><![CDATA[<p>I had my first open-source <a href="https://github.com/codazzo/dogr/pull/2">pull request merged</a> this week, into <a href="http://dogr.io">Dogr.io</a>.</p>
+
+<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_16.jpeg"><img src="http://adamsp.github.com/speakman-website/images/20-things/week_16.jpeg"></a></p>
+
+<!-- more -->
+
+
+<p>This was actually a bit of a pain - I&#8217;ve never used Node before, and some of the dependencies for this app were a bit of trouble. I had to have a certain Visual Studio &amp; Windows SDK installation on my Windows machine, so rather than bother with that I tried it on my Macbook, where an old installation of Macports got in the way. Eventually everything was there, and then Node was <em>easy</em>. Would like to play with it more in future.</p>
+
+<p>The problem I was having with OkHttp a few weeks back might finally be about to be resolved - <a href="http://stackoverflow.com/a/21078780/1217087">I got a reply from Jesse from Square</a>, though the fix that he&#8217;s implemented doesn&#8217;t actually solve my problem. It&#8217;s blocking on the <code>InputStream.read()</code> call, and the timeout check comes after this has returned.</p>
+
+<p>Finally, something else I&#8217;ve managed this week is to continue checking something in to Github every day - am up to an 18 day streak with this post.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 15]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/06/20-things-week-15/"/>
+    <updated>2014-01-06T18:06:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/01/06/20-things-week-15</id>
+    <content type="html"><![CDATA[<p>I checked in some code every day this week. That being said, I don&#8217;t really have a &#8216;Thing&#8217; that I&#8217;ve done. Turns out that I&#8217;m running out of ideas for small, week-long projects. My plan to do some small things and even a bigger project over my 2 week break didn&#8217;t work out so well - Christmas takes up a <em>lot</em> of time, and there was plenty of other things to do in my time off, too.</p>
+
+<p>So while I haven&#8217;t done any one thing worthy of note, some of the stuff I <em>have</em> done (these are mostly quite trivial):</p>
+
+<ul>
+<li>Implemented <a href="https://github.com/chrisbanes/ActionBar-PullToRefresh">PullToRefresh</a> library</li>
+<li>Implemented the <a href="https://github.com/keyboardsurfer/Crouton">Crouton</a> library for toasts</li>
+<li>Decided that loading 1000+ items with ORMLite to back a <code>ListView</code> was <em>not</em> a good idea and actually got around to writing the plumbing code to use a <code>Cursor</code></li>
+<li>Added a check for &#8216;last checked date&#8217; so we now query for the smallest number of quakes</li>
+</ul>
+
+
+<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_15.PNG"><img class="bottom" src="http://adamsp.github.com/speakman-website/images/20-things/week_15.PNG"></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Weeks 13 and 14]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/01/20-things-weeks-13-and-14/"/>
+    <updated>2014-01-01T11:49:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/01/01/20-things-weeks-13-and-14</id>
+    <content type="html"><![CDATA[<p>You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, 20 Weeks project. I could make excuses about it being Christmas, and being super busy, but that&#8217;d be a lie. I was probably playing <a href="http://us.battle.net/hearthstone/en/">Hearthstone</a>.</p>
+
+<!-- more -->
+
+
+<p>This post is a couple of days late as well - I had the mindset that if I&#8217;ve already missed one, what&#8217;s one more? But I woke up this morning determined to get this out of the way.</p>
+
+<p>So, what&#8217;ve I done the last 2 weeks? Well for Week 13, I wasn&#8217;t ready by the end of Monday with my code - I got it checked in on <a href="https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a">Christmas Eve</a>, one day late for my Monday deadline. I added a fairly basic widget to <a href="https://play.google.com/store/apps/details?id=speakman.whatsshakingnz">What&#8217;s Shaking, NZ?</a> - it shows the magnitude, depth and time of the latest earthquake. This would&#8217;ve been in earlier, except I had <a href="http://stackoverflow.com/questions/20752788/android-widget-wont-switch-layouts-more-than-once">some trouble</a> getting it to do what I wanted when the user turned the background service off, as well as a bit of messing around getting the sizing right across devices. I&#8217;m actually a lot happier with the code in the final solution, so while it was frustrating at the time I&#8217;m almost glad I encountered that problem. Certainly I&#8217;ll know for next time!</p>
+
+<p>Speaking of next time - Week 14! I&#8217;ve started work on the &#8220;global&#8221; version of What&#8217;s Shaking?, which is coming along nicely. I think I&#8217;ll count my current progress (which is downloading earthquakes from USGS, storing them locally rather than in-memory like WSNZ, and displaying them in a list from the database) as a &#8220;Thing&#8221;. It is technically usable, and I feel it&#8217;s a good base to build a much nicer app on top of, though that&#8217;ll take a bit of time. I&#8217;ve been writing it in Android Studio too, which is really nice - and seems to now be stable enough to use, I&#8217;ve had no troubles with it. I feel that this new version can be a much better application than WSNZ; I have (literally) years of experience that I didn&#8217;t have when I first started WSNZ.</p>
+
+<p>Additionally, I&#8217;ve <a href="https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485">finally added</a> a proper open-source licenses page to WSNZ - using the sample license page code I released a few weeks ago! Hurray! Unfortunately, I can&#8217;t release this update (with the widget and licenses page) as I can&#8217;t get Eclipse to export a signed APK. I&#8217;m certainly <a href="http://stackoverflow.com/questions/2680827/conversion-to-dalvik-format-failed-with-error-1-on-external-jar">not the only one</a> with this problem, but I&#8217;ve spent the last hour fighting Eclipse to build a release APK and it simply refuses. Hearthstone time, then. &#8216;Til next week!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things Week 12]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/20-things-week-12/"/>
+    <updated>2013-12-17T06:11:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/20-things-week-12</id>
+    <content type="html"><![CDATA[<p>Actually managed to get some code written this week, though it&#8217;s still pretty rough - I&#8217;ve got a basic widget working for What&#8217;s Shaking, NZ? for Android. Exciting stuff; that&#8217;ll be polished up and good to go next week. It was actually really easy to do, as I can update it directly from my existing background service (which polls the NZ Geonet API).</p>
+
+<p>Also wrote a <a href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string">blog post on a common Java encoding issue</a> - basically, when you&#8217;ve got a UTF-8 file with a Byte Order Mark at the start, things that parse that can freak out if they&#8217;re not expecting it. Easiest way to avoid it is to get rid of the BOM altogether.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Broken JSONObject creation from a UTF-8 input String]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/"/>
+    <updated>2013-12-17T06:04:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string</id>
+    <content type="html"><![CDATA[<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
+
+<p>Faced this issue, again, at work today. We have a build system with build variants for different customers. To add a new customer, we just create a new folder, add the images and add a JSON config file to suit the new customers settings. We read from that file and into a JSON string (and then into a JSON object) something like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>InputStream inStream = context.getResources().openRawResource(R.raw.local_config);
+</span><span class='line'>String json = IOUtils.toString(inStream);
+</span><span class='line'>JSONObject jsonObject = new JSONObject(json);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Sometimes, new customers speak a language other than English, and we have to save non-ASCII characters. In this case, the file gets saved as UTF-8. Testing this isn&#8217;t a problem on my devices (Galaxy S2/Nexus 7) - but my tester has twice come back to me now and said that it doesn&#8217;t work on our 2.3 device.</p>
+
+<!-- more -->
+
+
+<p>Figuring out the problem this time was pretty quick - I plugged her test phone in, saw this error popping up in Logcat and it triggered my memory about what was wrong. The problem is that the value hidden in that error message (encoded in this case as <code>0xEF 0xBB 0xBF</code>, often showing up as ï»¿ - see the <a href="http://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding">Wikipedia page</a>) is a Byte Order Mark. This is used to signal the <a href="http://en.wikipedia.org/wiki/Endianness">endianess</a> of the text stream. However, in UTF-8 it probably shouldn&#8217;t even be there (but is still technically legitimate):</p>
+
+<blockquote><p>The Unicode Standard permits the BOM in UTF-8, but does not require nor recommend its use. Byte order has no meaning in UTF-8, so its only use in UTF-8 is to signal at the start that the text stream is encoded in UTF-8.</p><footer><strong>Wikipedia</strong> <cite><a href='http://en.wikipedia.org/wiki/Byte_order_mark#UTF-8'>en.wikipedia.org/wiki/&hellip;</a></cite></footer></blockquote>
+
+
+<p>Because of this, Java doesn&#8217;t actually support automatically reading the BOM as an indicator of encoding - it adds it as part of the string, so you have to strip it out.  If you don&#8217;t, automatic parsers such as the one built into JSONObject may freak out and give you a confusing error like the one above. Reading the message, it <em>appears</em> that it can&#8217;t convert a String, which doesn&#8217;t make sense, as the constructor takes a String. It&#8217;s actually referring to the invisible (or in some cases barely visible) BOM character between the words &#8220;Value&#8221; and &#8220;of&#8221;.</p>
+
+<p>So why is it working correctly on my devices? <a href="https://code.google.com/p/android/issues/detail?id=18508">This bug</a> logged in 2011 was &#8216;fixed&#8217; by updating the built in JSON reader to handle UTF-8 strings with or without the Byte Order Mark. This change came in with Ice Cream Sandwich (Android 4.0) - hence why my tester is seeing the problem and I am not.</p>
+
+<p>The fix in our case has been to simply fix the file - the BOM shouldn&#8217;t be there anyway, so we just remove it. You can do this in Notepad++ by opening the UTF-8 file, clicking the Encoding menu and selecting &#8220;Encode in UTF-8 without BOM&#8221;. This may show up as &#8220;ANSI as UTF-8&#8221; in the encoding field at the bottom-right.</p>
+
+<p>The other, more general option (if you can&#8217;t control the source of the JSON you&#8217;re trying to parse) is to always &#8216;clean&#8217; your incoming JSON string. This workaround was suggested in the original bug:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>public Reader inputStreamToReader(InputStream in) throws IOException {
+</span><span class='line'>    in.mark(3);
+</span><span class='line'>    int byte1 = in.read();
+</span><span class='line'>    int byte2 = in.read();
+</span><span class='line'>    if (byte1 == 0xFF && byte2 == 0xFE) {
+</span><span class='line'>      return new InputStreamReader(in, "UTF-16LE");
+</span><span class='line'>    } else if (byte1 == 0xFF && byte2 == 0xFF) {
+</span><span class='line'>      return new InputStreamReader(in, "UTF-16BE");
+</span><span class='line'>    } else {
+</span><span class='line'>      int byte3 = in.read();
+</span><span class='line'>      if (byte1 == 0xEF && byte2 == 0xBB && byte3 == 0xBF) {
+</span><span class='line'>        return new InputStreamReader(in, "UTF-8");
+</span><span class='line'>      } else {
+</span><span class='line'>        in.reset();
+</span><span class='line'>        return new InputStreamReader(in);
+</span><span class='line'>      }
+</span><span class='line'>    }
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There are also <a href="http://stackoverflow.com/questions/1835430/byte-order-mark-screws-up-file-reading-in-java">many</a>, <a href="http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/input/BOMInputStream.html">many</a> other solutions available.</p>
+
+<p>Wonderful. Note that if you know your file is encoded a certain way, you should <em>always</em> pass the encoding to the reader - never depend on the default charset to be what you need. It&#8217;s worth spending some time reading about <a href="http://en.wikipedia.org/wiki/Unicode">Unicode</a> and the various encodings you&#8217;re likely to encounter - <a href="http://en.wikipedia.org/wiki/Windows-1252">Windows-1252 (or CP-1252)</a>, <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and <a href="http://en.wikipedia.org/wiki/UTF-16">UTF-16</a>, and how to interpret the bytes for these encodings. I find <a href="http://www.fileformat.info/info/unicode/char/FEFF/index.htm">fileformat.info</a> to be extremely useful, as well as the <a href="http://sourceforge.net/projects/npp-plugins/files/Hex%20Editor/">HexEditor Notepad++ plugin</a> for looking directly at the bytes (which is reportedly a bit unstable with the latest version of NP++, though I&#8217;ve never had any issues) - there will no doubt be something similar either built in to or available for your text editor of choice.</p>
+
+<p>Text encoding problems are painful to deal with - and if you&#8217;re not sure what you should be using, <a href="http://www.utf8everywhere.org/">use UTF-8</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 11]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/09/20-things-week-11/"/>
+    <updated>2013-12-09T21:03:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/12/09/20-things-week-11</id>
+    <content type="html"><![CDATA[<p>Once again, nothing to present this week. I&#8217;ve continued looking into this bug in KitKat that I mentioned last week; I&#8217;ve spent most of my time trying to replicate it in a minimal amount of code. This included exploring the <a href="https://github.com/square/okhttp">OkHttp tests</a> (which was&#8230; an interesting exercise), and modifying the sample code provided for the <a href="https://code.google.com/p/android/issues/detail?id=38817">original bug</a> whose fix I suspect introduced this problem.</p>
+
+<p>Despite all this, I&#8217;ve still been unable to reproduce it except via a Twitter stream (which requires a bit more setup than a chunked encoding HTTP connection without encoding - and so I&#8217;ve been avoiding this in the minimal time I&#8217;ve had to try this).</p>
+
+<p>Additionally, I lost a bit of motivation part way through the week with <a href="http://www.xda-developers.com/android/android-4-4-1-update-for-the-nexus-5-now-live/">news that 4.4.1 is just around the corner</a> - if the bug is fixed in that release, I won&#8217;t bother working on it anymore! Unfortunately, as of this writing, there&#8217;s still <a href="https://developers.google.com/android/nexus/images">no Nexus 7 2012 image available</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 10]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/02/20-things-week-10/"/>
+    <updated>2013-12-02T17:56:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/12/02/20-things-week-10</id>
+    <content type="html"><![CDATA[<p>So, the halfway point of my wee experiment. 10 weeks out of 20. The most obvious question at this stage is have I created 10 Things? Nope, but that&#8217;s okay.</p>
+
+<!-- more -->
+
+
+<p>With Christmas coming up I&#8217;ve got 2 full weeks off work. That&#8217;s 2 weeks to spend time with my family, go to the beach, relax, and work on personal projects. I plan to push out enough gists, small projects, blog posts and simple programs in this time to catch up with what I&#8217;m behind - and I&#8217;ll hopefully even be able to get a bigger project done.</p>
+
+<p>Speaking of bigger projects, at this point it&#8217;s fair to say that I don&#8217;t think I can do many of the things on my original list - they&#8217;re too big to do in a week, especially when working a 40 hour week and having anything resembling a social life. I suspected this might be the case, but I was also hopeful that with a public declaration of intent to produce something weekly, I&#8217;d be able to find the time to make something happen.</p>
+
+<p>So what have I done this week? Well, again, I&#8217;ve not produced anything. But not because I&#8217;ve been slacking off, or even extremely busy with non-programming tasks. I recently received an email saying my <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Android Daydream</a> wasn&#8217;t working properly on Android 4.4 - and I&#8217;ve spent most of my spare time over the last week trying to figure this out.</p>
+
+<p>The user-visible bug was that it wasn&#8217;t closing when you hit Home/Back. Stepping into the code, the call to shutdown the Twitter stream in the <code>onDreamingStopped</code> call wasn&#8217;t returning as quickly as it used to in 4.2 &amp; 4.3 - and then it was eventually crashing with a <code>NetworkOnMainThreadException</code>. Clearly that&#8217;s easy enough to fix - drop the <code>shutdown</code> call in another thread and return immediately. But that doesn&#8217;t fix the problem of why it doesn&#8217;t return near-immediately, so I&#8217;ve been poring over Android source &amp; changelogs trying to figure out <em>why</em>. Most of my findings I&#8217;ve collated in <a href="http://stackoverflow.com/q/20306498/1217087">this StackOverflow question</a> (which as of this writing, doesn&#8217;t have an answer).</p>
+
+<p>I&#8217;m going to spend more time on this this week - try to reproduce it with another <code>Transfer-Encoding: chunked</code> stream, and since it appears to be due to a change in OkHttp, I&#8217;ll ask in the Square community on Google+. With any luck, I&#8217;ll have enough data to log a comprehensive bug - or at the least understand what&#8217;s going on enough to implement a better fix.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 9]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/20-things-week-9/"/>
+    <updated>2013-11-25T20:01:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/20-things-week-9</id>
+    <content type="html"><![CDATA[<p>So this week, like most of the Things I&#8217;ve done for this project, I wrote a blog post. Shocking.</p>
+
+<p><a href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/">This post</a> was a fairly hefty one, covering the new <a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> library for Android. If you&#8217;re performing any network activity in an Android app, I&#8217;d recommend taking a look at it. It helps to avoid a whole skew of problems you may not even know exist, and has a lot of useful features. It takes a bit of reading to get set up, but once you know what you&#8217;re doing it&#8217;s great.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
+    <updated>2013-11-25T17:55:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
+    <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
+
+<!-- more -->
+
+
+<p></p>
+
+<h2>Getting the library</h2>
+
+<p>I’ll assume you have <a href="http://git-scm.com/">git</a> and <a href="http://ant.apache.org/">ant</a> installed.</p>
+
+<p>First, we have to get the library:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git clone https://android.googlesource.com/platform/frameworks/volley</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we have the source code, we need to build it:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cd volley
+</span><span class='line'>ant jar</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, we have <code>volley.jar</code> in the <code>bin</code> directory. Copy this into <code>libs</code> in Eclipse (via drag &amp; drop through the GUI so it sets everything up properly) or set it up in your <code>build.gradle</code> if you’re using Studio. Wonderful.</p>
+
+<h2>Some basic setup</h2>
+
+<p>Volley works by sending requests to a <code>RequestQueue</code>. To create one of these requests, you override the <code>Request</code> object and implement a few methods:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">queue</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Request</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;(</span><span class="n">Method</span><span class="o">.</span><span class="na">GET</span><span class="o">,</span> <span class="n">url</span><span class="o">,</span> <span class="n">errorListener</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">protected</span> <span class="n">Response</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="nf">parseNetworkResponse</span><span class="o">(</span><span class="n">NetworkResponse</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// TODO Auto-generated method stub</span>
+</span><span class='line'>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">deliverResponse</span><span class="o">(</span><span class="n">String</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// TODO Auto-generated method stub</span>
+</span><span class='line'>      
+</span><span class='line'>  <span class="o">}});</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can send these with a priority (by overriding <code>getPriority()</code>), so that higher priority requests get sent to the front of the queue, not the back. Useful if, for example, you’re loading some images in the background, but the user clicks on something that needs immediate download.</p>
+
+<p>Before we can use a queue, we have to set one up. This should done as a singleton. Since the easiest way of creating a <code>RequestQueue</code> requires a <code>Context</code>, you can either subclass <code>Application</code> (which the official docs advise against) or do it this way:</p>
+
+<figure class='code'><figcaption><span>VolleyProvider.java</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">VolleyProvider</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">RequestQueue</span> <span class="n">queue</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="nf">VolleyProvider</span><span class="o">()</span> <span class="o">{</span> <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">synchronized</span> <span class="n">RequestQueue</span> <span class="nf">getQueue</span><span class="o">(</span><span class="n">Context</span> <span class="n">ctx</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">queue</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">queue</span> <span class="o">=</span> <span class="n">Volley</span><span class="o">.</span><span class="na">newRequestQueue</span><span class="o">(</span><span class="n">ctx</span><span class="o">.</span><span class="na">getApplicationContext</span><span class="o">());</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">queue</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And usage:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">RequestQueue</span> <span class="n">queue</span> <span class="o">=</span> <span class="n">VolleyProvider</span><span class="o">.</span><span class="na">getQueue</span><span class="o">(</span><span class="n">mContext</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There are a few other ways of constructing a queue, allowing you to specify your own HTTP stack, cache, thread pool size, etc.</p>
+
+<h2>Now let’s GET some JSON</h2>
+
+<p>So now we&#8217;ve got our default queue set up, we can send a request. As you saw earlier, a request requires you to implement two methods - <code>parseNetworkResponse</code> and <code>deliverResponse</code>. The first of these methods parses your network response into some object that you&#8217;re expecting, <strong>from a worker thread</strong>. The second delivers that response back to your UI thread, <strong>unless <code>parseNetworkResponse</code> returns <code>null</code></strong>.</p>
+
+<p>To fetch some simple JSON back from a given URL, there&#8217;s a convenient utility class that comes packaged in <code>com.android.volley.toolbox</code> called <code>JsonRequest</code>.</p>
+
+<p>This class manages parsing any request body string into a byte array (the <code>getBody</code> method returns a <code>byte[]</code>), as well as specifying the content type headers, etc. You still have to implement the <code>parseNetworkResponse</code> abstract method from before, though you now supply a listener for the success case instead of an override. So now our request looks a bit like this (using <a href="https://code.google.com/p/google-gson/">Gson</a> for parsing the response, because it&#8217;s awesome):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Person</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kt">long</span> <span class="n">id</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">firstName</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">lastName</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">address</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">String</span> <span class="n">url</span> <span class="o">=</span> <span class="s">&quot;http://person.com/person?id=1234&quot;</span><span class="o">;</span>
+</span><span class='line'><span class="n">Request</span> <span class="n">request</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JsonRequest</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;(</span><span class="n">Method</span><span class="o">.</span><span class="na">GET</span><span class="o">,</span> <span class="n">url</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="k">new</span> <span class="n">Listener</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onResponse</span><span class="o">(</span><span class="n">Person</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Do something with our person object </span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">},</span> <span class="k">new</span> <span class="n">Response</span><span class="o">.</span><span class="na">ErrorListener</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onErrorResponse</span><span class="o">(</span><span class="n">VolleyError</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Handle the error </span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.statusCode</span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.data</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">})</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">protected</span> <span class="n">Response</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="nf">parseNetworkResponse</span><span class="o">(</span><span class="n">NetworkResponse</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">String</span> <span class="n">jsonString</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">String</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">data</span><span class="o">,</span> <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCharset</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">headers</span><span class="o">));</span>
+</span><span class='line'>      <span class="n">Person</span> <span class="n">person</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">GsonBuilder</span><span class="o">().</span><span class="na">create</span><span class="o">().</span><span class="na">fromJson</span><span class="o">(</span><span class="n">jsonString</span><span class="o">,</span> <span class="n">Person</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">Response</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">Response</span><span class="o">.</span><span class="na">success</span><span class="o">(</span><span class="n">person</span><span class="o">,</span> <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCacheHeaders</span><span class="o">(</span><span class="n">response</span><span class="o">));</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">};</span>
+</span><span class='line'><span class="n">queue</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">request</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>And POST some back to the server</h2>
+
+<p>POSTing JSON back is equally as easy! Instead of passing in null for our body, we pass in a JSON String.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">String</span> <span class="n">url</span> <span class="o">=</span> <span class="s">&quot;http://person.com/person/update?id=1234&quot;</span><span class="o">;</span>
+</span><span class='line'><span class="n">String</span> <span class="n">body</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">GsonBuilder</span><span class="o">().</span><span class="na">create</span><span class="o">().</span><span class="na">toJson</span><span class="o">(</span><span class="n">somePerson</span><span class="o">);</span>
+</span><span class='line'><span class="n">Request</span> <span class="n">request</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JsonRequest</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;(</span><span class="n">Method</span><span class="o">.</span><span class="na">POST</span><span class="o">,</span> <span class="n">url</span><span class="o">,</span> <span class="n">body</span><span class="o">,</span> <span class="k">new</span> <span class="n">Listener</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onResponse</span><span class="o">(</span><span class="n">Person</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Do something with our person object </span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">},</span> <span class="k">new</span> <span class="n">Response</span><span class="o">.</span><span class="na">ErrorListener</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onErrorResponse</span><span class="o">(</span><span class="n">VolleyError</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Handle the error </span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.statusCode</span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.data</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">})</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">protected</span> <span class="n">Response</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="nf">parseNetworkResponse</span><span class="o">(</span><span class="n">NetworkResponse</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">String</span> <span class="n">jsonString</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">String</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">data</span><span class="o">,</span> <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCharset</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">headers</span><span class="o">));</span>
+</span><span class='line'>      <span class="n">Person</span> <span class="n">person</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">GsonBuilder</span><span class="o">().</span><span class="na">create</span><span class="o">().</span><span class="na">fromJson</span><span class="o">(</span><span class="n">jsonString</span><span class="o">,</span> <span class="n">Person</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>      <span class="n">Response</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">Response</span><span class="o">.</span><span class="na">success</span><span class="o">(</span><span class="n">person</span><span class="o">,</span> <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCacheHeaders</span><span class="o">(</span><span class="n">response</span><span class="o">));</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Is there an easier way?</h2>
+
+<p>Sort-of. I&#8217;ve abstracted the JSON parsing out so you only have to handle the success and the failure cases. If you&#8217;ve got more complex objects that need custom type adapters, you could put the Gson object creation and type adapter registration into another class somewhere and call it from here. Just drop this <code>GsonRequest</code> class in and you can use it by simply passing in the class of object you expect, as follows.</p>
+
+<figure class='code'><figcaption><span>GsonRequest.java </span><a href='https://gist.github.com/adamsp/7637132'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Copyright 2013 Adam Speakman</span>
+</span><span class='line'><span class="cm"> * </span>
+</span><span class='line'><span class="cm"> * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+</span><span class='line'><span class="cm"> * you may not use this file except in compliance with the License.</span>
+</span><span class='line'><span class="cm"> * You may obtain a copy of the License at</span>
+</span><span class='line'><span class="cm"> * </span>
+</span><span class='line'><span class="cm"> *    http://www.apache.org/licenses/LICENSE-2.0</span>
+</span><span class='line'><span class="cm"> * </span>
+</span><span class='line'><span class="cm"> * Unless required by applicable law or agreed to in writing, software</span>
+</span><span class='line'><span class="cm"> * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+</span><span class='line'><span class="cm"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+</span><span class='line'><span class="cm"> * See the License for the specific language governing permissions and</span>
+</span><span class='line'><span class="cm"> * limitations under the License.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="kn">package</span> <span class="n">your</span><span class="o">.</span><span class="na">package</span><span class="o">.</span><span class="na">here</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.io.UnsupportedEncodingException</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.NetworkResponse</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.ParseError</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.Response</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.Response.ErrorListener</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.Response.Listener</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.toolbox.HttpHeaderParser</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.android.volley.toolbox.JsonRequest</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.google.gson.GsonBuilder</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">com.google.gson.JsonSyntaxException</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">GsonRequest</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">JsonRequest</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">Class</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">mResponseClass</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">GsonRequest</span><span class="o">(</span><span class="kt">int</span> <span class="n">method</span><span class="o">,</span> <span class="n">String</span> <span class="n">url</span><span class="o">,</span> <span class="n">String</span> <span class="n">requestBody</span><span class="o">,</span> <span class="n">Class</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">responseClass</span><span class="o">,</span> <span class="n">Listener</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">listener</span><span class="o">,</span>
+</span><span class='line'>            <span class="n">ErrorListener</span> <span class="n">errorListener</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">(</span><span class="n">method</span><span class="o">,</span> <span class="n">url</span><span class="o">,</span> <span class="n">requestBody</span><span class="o">,</span> <span class="n">listener</span><span class="o">,</span> <span class="n">errorListener</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">mResponseClass</span> <span class="o">=</span> <span class="n">responseClass</span><span class="o">;</span>
+</span><span class='line'>        <span class="c1">// Do some generic stuff in here - for example, set your retry policy to</span>
+</span><span class='line'>        <span class="c1">// longer if you know all your requests are going to take &gt; 2.5 seconds</span>
+</span><span class='line'>        <span class="c1">// etc etc...</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">protected</span> <span class="n">Response</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">parseNetworkResponse</span><span class="o">(</span><span class="n">NetworkResponse</span> <span class="n">networkResponse</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">String</span> <span class="n">jsonString</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">String</span><span class="o">(</span><span class="n">networkResponse</span><span class="o">.</span><span class="na">data</span><span class="o">,</span> <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCharset</span><span class="o">(</span><span class="n">networkResponse</span><span class="o">.</span><span class="na">headers</span><span class="o">));</span>
+</span><span class='line'>            <span class="n">T</span> <span class="n">response</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">GsonBuilder</span><span class="o">().</span><span class="na">create</span><span class="o">().</span><span class="na">fromJson</span><span class="o">(</span><span class="n">jsonString</span><span class="o">,</span> <span class="n">mResponseClass</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">com</span><span class="o">.</span><span class="na">android</span><span class="o">.</span><span class="na">volley</span><span class="o">.</span><span class="na">Response</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">com</span><span class="o">.</span><span class="na">android</span><span class="o">.</span><span class="na">volley</span><span class="o">.</span><span class="na">Response</span><span class="o">.</span><span class="na">success</span><span class="o">(</span><span class="n">response</span><span class="o">,</span>
+</span><span class='line'>                    <span class="n">HttpHeaderParser</span><span class="o">.</span><span class="na">parseCacheHeaders</span><span class="o">(</span><span class="n">networkResponse</span><span class="o">));</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">UnsupportedEncodingException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">com</span><span class="o">.</span><span class="na">android</span><span class="o">.</span><span class="na">volley</span><span class="o">.</span><span class="na">Response</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="k">new</span> <span class="nf">ParseError</span><span class="o">(</span><span class="n">e</span><span class="o">));</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">JsonSyntaxException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">com</span><span class="o">.</span><span class="na">android</span><span class="o">.</span><span class="na">volley</span><span class="o">.</span><span class="na">Response</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="k">new</span> <span class="nf">ParseError</span><span class="o">(</span><span class="n">e</span><span class="o">));</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And usage:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Request</span> <span class="n">request</span> <span class="o">=</span> <span class="k">new</span> <span class="n">GsonRequest</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;(</span><span class="n">Method</span><span class="o">.</span><span class="na">POST</span><span class="o">,</span> <span class="n">url</span><span class="o">,</span> <span class="n">body</span><span class="o">,</span> <span class="n">Person</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="k">new</span> <span class="n">Listener</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onResponse</span><span class="o">(</span><span class="n">Person</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Do something with our person object </span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">},</span> <span class="k">new</span> <span class="n">Response</span><span class="o">.</span><span class="na">ErrorListener</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onErrorResponse</span><span class="o">(</span><span class="n">VolleyError</span> <span class="n">error</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Handle the error </span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.statusCode</span>
+</span><span class='line'>      <span class="c1">// error.networkResponse.data</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">});</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>What about that easy image loading?</h2>
+
+<p>Loading images with Volley is one of my favourite features of the library. Once it&#8217;s setup, it&#8217;s really easy to use. It handles loading images off the UI thread, can show a default image and an error one, and handles caching all for you. You need to set up an <code>ImageLoader</code>, similar to how you set up the <code>RequestQueue</code> as a singleton:</p>
+
+<figure class='code'><figcaption><span>ImageLoaderProvider.java</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ImageLoaderProvider</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">ImageLoader</span> <span class="n">imageLoader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="nf">ImageLoaderProvider</span><span class="o">()</span> <span class="o">{</span> <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">synchronized</span> <span class="n">ImageLoader</span> <span class="nf">getImageLoader</span><span class="o">(</span><span class="n">Context</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">RequestQueue</span> <span class="n">queue</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">imageLoader</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">imageLoader</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ImageLoader</span><span class="o">(</span><span class="n">queue</span><span class="o">,</span> <span class="k">new</span> <span class="nf">LruBitmapCache</span><span class="o">(</span><span class="n">getCacheSize</span><span class="o">(</span><span class="n">ctx</span><span class="o">)));</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">imageLoader</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * Returns a cache size equal to approximately three screens worth of images.</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">int</span> <span class="nf">getCacheSize</span><span class="o">(</span><span class="n">Context</span> <span class="n">ctx</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">final</span> <span class="n">DisplayMetrics</span> <span class="n">displayMetrics</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="na">getResources</span><span class="o">().</span><span class="na">getDisplayMetrics</span><span class="o">();</span>
+</span><span class='line'>        <span class="kd">final</span> <span class="kt">int</span> <span class="n">screenWidth</span> <span class="o">=</span> <span class="n">displayMetrics</span><span class="o">.</span><span class="na">widthPixels</span><span class="o">;</span>
+</span><span class='line'>        <span class="kd">final</span> <span class="kt">int</span> <span class="n">screenHeight</span> <span class="o">=</span> <span class="n">displayMetrics</span><span class="o">.</span><span class="na">heightPixels</span><span class="o">;</span>
+</span><span class='line'>        <span class="kd">final</span> <span class="kt">int</span> <span class="n">screenBytes</span> <span class="o">=</span> <span class="n">screenWidth</span> <span class="o">*</span> <span class="n">screenHeight</span> <span class="o">*</span> <span class="mi">4</span><span class="o">;</span> <span class="c1">// 4 bytes per pixel</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">return</span> <span class="n">screenBytes</span> <span class="o">*</span> <span class="mi">3</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, replace your <code>ImageView</code> objects with <code>NetworkImageView</code> ones:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;com.android.volley.toolbox.NetworkImageView</span>
+</span><span class='line'>    <span class="na">android:id=</span><span class="s">&quot;@+id/some_image&quot;</span>
+</span><span class='line'>    <span class="err">...</span> <span class="nt">/&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And finally, all you need to do is pass your <code>NetworkImageView</code> the URL of the image you&#8217;d like loaded, and the <code>ImageLoader</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ImageLoader</span> <span class="n">imageLoader</span> <span class="o">=</span> <span class="n">ImageLoaderProvider</span><span class="o">.</span><span class="na">getImageLoader</span><span class="o">(</span><span class="n">mContext</span><span class="o">,</span> <span class="n">VolleyProvider</span><span class="o">.</span><span class="na">getQueue</span><span class="o">(</span><span class="n">mContext</span><span class="o">));</span>
+</span><span class='line'><span class="o">((</span><span class="n">NetworkImageView</span><span class="o">)</span><span class="n">findViewById</span><span class="o">(</span><span class="n">R</span><span class="o">.</span><span class="na">id</span><span class="o">.</span><span class="na">some_image</span><span class="o">)).</span><span class="na">setImageUrl</span><span class="o">(</span><span class="n">imgUrl</span><span class="o">,</span> <span class="n">imageLoader</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There are also methods available such as <code>setDefaultImageResId</code> and <code>setErrorImageResId</code>, for supplying default and error resources.</p>
+
+<h2>Anything else?</h2>
+
+<p>Volley has a default TTL on requests of 2.5 seconds - after this, it&#8217;ll retry the request. This can result in some unexpected behaviour - for example where your error listener gets called (immediately after the retry), then your success listener gets called a little while later (when the original request returns). You can fix this by specifying a timeout in your request:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">REQUEST_TIMEOUT_MS</span> <span class="o">=</span> <span class="mi">10000</span><span class="o">;</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="n">request</span><span class="o">.</span><span class="na">setRetryPolicy</span><span class="o">(</span><span class="k">new</span> <span class="nf">DefaultRetryPolicy</span><span class="o">(</span><span class="n">REQUEST_TIMEOUT_MS</span><span class="o">,</span> <span class="n">DefaultRetryPolicy</span><span class="o">.</span><span class="na">DEFAULT_MAX_RETRIES</span><span class="o">,</span> <span class="n">DefaultRetryPolicy</span><span class="o">.</span><span class="na">DEFAULT_BACKOFF_MULT</span><span class="o">));</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Another thing to be aware of is that the image loading will cache images in the full size they come down as. This means if you’re downloading images at full resolution but only displaying them at a much smaller one, you’re going to be caching them at full res. If this is in a list view, you’re going to be pushing stuff out of the cache (and then re-downloading them) a lot more often than desirable.</p>
+
+<p>You can get around this by changing some code in <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java"><code>NetworkImageView</code></a>. The important bit is near the end of the <code>loadImageIfNecessary(final boolean isInLayoutPass)</code> method. The code makes a call to the following method in the <code>ImageLoader</code> class:</p>
+
+<figure class='code'><figcaption><span>ImageLoader.java </span><a href='https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="n">ImageContainer</span> <span class="nf">get</span><span class="o">(</span><span class="n">String</span> <span class="n">requestUrl</span><span class="o">,</span> <span class="kd">final</span> <span class="n">ImageListener</span> <span class="n">listener</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nf">get</span><span class="o">(</span><span class="n">requestUrl</span><span class="o">,</span> <span class="n">listener</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice how that calls an overload that takes some <code>int</code> values?</p>
+
+<figure class='code'><figcaption><span>ImageLoader.java </span><a href='https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="n">ImageContainer</span> <span class="nf">get</span><span class="o">(</span><span class="n">String</span> <span class="n">requestUrl</span><span class="o">,</span> <span class="n">ImageListener</span> <span class="n">imageListener</span><span class="o">,</span>
+</span><span class='line'>            <span class="kt">int</span> <span class="n">maxWidth</span><span class="o">,</span> <span class="kt">int</span> <span class="n">maxHeight</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Well, if we ‘fix’ the code back in <code>NetworkImageView</code> to pass in the width &amp; height of the view, then the image gets scaled down and cached at the smaller size (this takes is utilised in the <code>doParse</code> method of <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageRequest.java"><code>ImageRequest</code></a>:</p>
+
+<figure class='code'><figcaption><span>NetworkImageLoader.java</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ImageContainer</span> <span class="n">newContainer</span> <span class="o">=</span> <span class="n">mImageLoader</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">mUrl</span><span class="o">,</span>
+</span><span class='line'>    <span class="k">new</span> <span class="nf">ImageListener</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="o">...</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="n">getMeasuredWidth</span><span class="o">(),</span>
+</span><span class='line'>    <span class="n">getMeasuredHeight</span><span class="o">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that if you pass the image URL in for use in a different place, <strong>it’ll use the (scaled down) image from the cache</strong> - so if you need the full resolution image, this solution will need some modification.</p>
+
+<h2>Wow, Volley can do lots of stuff!</h2>
+
+<p>And I certainly haven&#8217;t covered all of it here. There&#8217;s loads more that it can do. I&#8217;d recommend looking through some of the classes in <code>com.android.volley.toolbox</code> to see what else is already written for you, and for some ideas of how to use some of the other cool features it has to offer.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 8]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/18/20-things-week-8/"/>
+    <updated>2013-11-18T20:24:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/18/20-things-week-8</id>
+    <content type="html"><![CDATA[<p>We had a crazy week at work this week; we’re doing a rewrite of our app, and we had an internal stakeholder demo. Was doing some long hours.</p>
+
+<p>This weekend I went to <a href="http://devmob.co.nz">devmob</a> in Dunedin. It’s an unconference/barcamp that’s held here for mobile devs from all around the country. Met lots of interesting people and had a great time - but there was no time to write code.</p>
+
+<p>So, this week, I’ve done nothing towards my 20 Things. Unfortunate, but I knew this would happen. Next week I’ll definitely have something out!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 7]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/11/20-things-week-7/"/>
+    <updated>2013-11-11T18:55:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/11/20-things-week-7</id>
+    <content type="html"><![CDATA[<p>Not much in the way of code this week; work’s been a bit hectic, and I had a wedding to attend on Saturday. I did write a post on <a href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">avoiding an OutOfMemoryError on older Android devices when displaying large bitmaps</a>.</p>
+
+<p>Speaking of that wedding, it was the one I was going to make a website for - guess that won’t be happening, then&#8230; oops.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Handling OutOfMemoryError with large bitmaps on older Android devices]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/"/>
+    <updated>2013-11-10T12:42:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices</id>
+    <content type="html"><![CDATA[<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
+
+<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
+
+
+<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
+
+<!-- more -->
+
+
+<p>The situation where I encountered this was at work when working on a control for displaying a seat map for a movie theatre as part of a ticket purchasing wizard. It shows the screen, the seats, some seat numbers, etc. From there the app user is able to pick seats to sit in for watching the movie. Previously this had been built by drawing many <code>Button</code> controls with a custom drawable. This was terribly inefficient, as all those controls had to be totally redrawn whenever the user tried to zoom, and was practically unusable for large theatres (with hundreds of seats) even on top end devices.</p>
+
+<p>Clearly this was due for a rewrite. The method I worked out for doing this was to create a &#8216;base&#8217; bitmap from the theatre data showing all empty and already-sold seats. I&#8217;d use this as a static base image, and then paint &#8216;selected&#8217; seats on top of that as the user taps to select/deselect seats they&#8217;d like to sit in.</p>
+
+<p>This method had a few benefits we didn&#8217;t enjoy with the old method:</p>
+
+<ul>
+<li>we only had to create the whole theatre model (calculating seat positions etc) once, when creating the base image (previously it was re-calculating seat sizes and locations at every zoom level, ugh)</li>
+<li>since it was an image, we could now just drop it inside a <a href="https://github.com/MikeOrtiz/TouchImageView">TouchImageView</a> and that would handle zooming and panning (and <a href="https://github.com/MikeOrtiz/TouchImageView/pull/33">this pull request</a> maps touch inputs back to our original image co-ordinates after zoom)</li>
+<li>the static base image meant we only had to perform N+1 passes across the canvas when drawing seat selections, where N was the number of selected seats (typically low, so this is very fast)</li>
+</ul>
+
+
+<p>So off I went and coded this brilliant design. The code for the <code>SeatingImageView</code> control ended up looking <em>something</em> like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
+</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
+</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So you&#8217;d set your base image, then overlay some selected seat images on top of that as necessary. I tested this on my phone (Galaxy SII i9100, Android 4.1) and my Nexus 7 (2012 model, Android 4.3) and sent it off to QA to be approved.</p>
+
+<p>But our tester sent it back. She said it was crashing whenever she selected a seat - but only on certain cinemas. This was odd, as I couldn&#8217;t replicate it at all. I went and had a chat to her, and sure enough, it was definitely crashing on her device (an old HTC running Android 2.3). I borrowed the phone and went about figuring this out.</p>
+
+<p>Of course, it was the dreaded <code>OutOfMemoryError</code>. But how to fix this? I was already capping the size of the bitmap when building the base image and scaling seats down to fit. If I forced the max size to be lower, then large cinemas started to look awfully pixelated when zoomed in. I did some logging of the memory, and it appeared that the OOM was occurring at the time we created the new image with the seats - <code>Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);</code>.</p>
+
+<p>We had in memory at this point 3 copies of the bitmap:</p>
+
+<ol>
+<li>the immutable base image that wasn&#8217;t being displayed (<code>mImmutableBase</code>)</li>
+<li>the <em>copy</em> of the immutable base we&#8217;d created that was currently being displayed to the user (<code>setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.RGB_8888, true));</code>)</li>
+<li>the copy we&#8217;d <em>just created</em> to draw the newly selected seats onto (<code>Bitmap mutable = immutablebase.copy(Bitmap.Config.RGB_8888, true);</code>)</li>
+</ol>
+
+
+<p>That seemed easy enough to handle - we&#8217;d just get rid of the one being displayed before we created a copy of the immutable base, then we&#8217;d only ever have 2 in memory at once. I updated my <code>drawSeats</code> method to look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span> <span class="c1">// Clear all references to the existing bitmap</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But this didn&#8217;t work either!</p>
+
+<p>Reading through <a href="https://code.google.com/p/android/issues/detail?id=8488#c80">this thread</a> (post #80 down is especially useful) helps to shed some light on what&#8217;s causing us to run out of memory here. The bitmap has memory in both the native and Dalvik heap, and it&#8217;s not getting recycled from native quickly enough. Luckily, there is a way to force this to occur.</p>
+
+<p>The fix was to:</p>
+
+<ol>
+<li>acquire a reference to the bitmap that is currently being shown - <code>getDrawable()</code></li>
+<li>tell the <code>ImageView</code> to show nothing - <code>setImageBitmap(null)</code> - while still holding a reference to the old bitmap</li>
+<li>manually call <code>recycle()</code> on the old bitmap - this clears the native heap allocation</li>
+<li>although we <em>shouldn&#8217;t have to</em> call <code>System.gc()</code>, I found that this was still required to consistently remove the bitmap from memory</li>
+</ol>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
+</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
+</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">recycleOldImage</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">recycleOldImage</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Drawable</span> <span class="n">oldImage</span> <span class="o">=</span> <span class="n">getDrawable</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">oldImage</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">BitmapDrawable</span> <span class="n">oldBitmap</span> <span class="o">=</span> <span class="o">(</span><span class="n">BitmapDrawable</span><span class="o">)</span><span class="n">oldImage</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">oldBitmap</span><span class="o">.</span><span class="na">getBitmap</span><span class="o">().</span><span class="na">recycle</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This fixed the bug! The memory logging I’d put in showed that were were only keeping at max two copies of the base image in memory at a time, and more importantly we weren’t seeing any crashes.</p>
+
+<p>However, the logs were also showing that we were still precariously close to the memory limit for the device. I was concerned about other devices with <a href="http://stackoverflow.com/questions/4351678/two-questions-about-max-heap-sizes-and-available-memory-in-android">even lower memory limits</a> - or other edge case theatre layouts we didn’t have examples for. This required something of a minor design change to resolve.</p>
+
+<p>I&#8217;d been depending on using ARGB_8888 config for the alpha channel, providing a transparent background behind the seat images to match the background for the rest of the screen. After some experimentation I discovered that there was no noticable change in the colour of my seat images when switching to RGB_565, but the memory usage dropped by a large amount - enough that I was happy I wasn&#8217;t going to hit the cap again. It was simple enough to modify the control to take a &#8216;background&#8217; colour at creation, which reproduced the effects of transparency. Of course if you&#8217;re faced with the same situation but are using a background with a gradient, or a colour not accurately reproducable in RGB_565, this will not work for you as easily.</p>
+
+<p>Other tips:</p>
+
+<ul>
+<li>use RGB_565 if you can - it uses a lot less memory than ARGB_8888 (2 bytes per pixel instead of 4)</li>
+<li>if you&#8217;re debugging memory issues with bitmaps, <strong>use an Android 3.0 or higher device</strong> to debug, since bitmap memory allocations are reflected correctly in the Dalvik heap on these devices (see the <a href="http://developer.android.com/training/articles/memory.html#Bitmaps">memory docs</a>)</li>
+<li>always test on the lowest spec device you have available to you, even if you&#8217;re not doing all your development on that</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 6]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/04/20-things-week-6/"/>
+    <updated>2013-11-04T21:12:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/04/20-things-week-6</id>
+    <content type="html"><![CDATA[<p>In case you missed it, the <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Android Daydream</a> I linked to in <a href="http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5/">last weeks</a> post didn’t actually go up until Wednesday - and the blog post (though dated Monday October 28, when I wrote it) didn’t go up until Tuesday. It was quite late on Monday, and the OS X Mavericks update meant my usual site deployment procedure (<code>rake generate</code>, <code>rake deploy</code>) didn’t work. I had to run <code>rake</code> as sudo for some reason (suspect it was something to do with Ruby in the new OS X?), which changed read permissions on everything, then when I tried to deploy, I had to do it as sudo again, and my Github SSH key is for my user, so that didn’t work. I gave up for the evening and went to bed. I managed to revert everything on Tuesday night, and I’m back to my regular deployment process.</p>
+
+<!-- more -->
+
+
+<p>So after all that, and the fact that I didn’t actually finish the Week 5 code until Wednesday, I had a fairly short Week 6 - especially as Battlefield 4 came out on Friday. I spent most of my spare time over the weekend playing that, knowing I had to come up with something before Monday night.</p>
+
+<p>What I’ve done this week is a very small thing: I’ve installed a new Octopress theme for my site - <a href="https://github.com/tommy351/Octopress-Theme-Slash">Slash</a>. I like this theme a lot better than the default - the social media icons at the top, the font size and style, the layout. I’ve also now got working ‘share’ buttons at the bottom of each post, which is a nice change. In my <a href="http://adamsp.github.com/speakman-website/blog/2013/09/23/20-things-in-20-weeks/">original list of 20+ Things</a>, I suggested &#8220;Fixing the Twitter stream&#8221; down the side - instead, I’ve gotten rid of it, and gone for this new style.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 5]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5/"/>
+    <updated>2013-10-28T20:07:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5</id>
+    <content type="html"><![CDATA[<p>This week I wrote <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Dream in Tweets</a>, which is an Android Daydream that shows the logged in users Twitter feed. A Daydream is effectively a screen saver that runs on Android 4.2 and up. But unlike a screensaver, it can do everything you can do in a regular Activity.</p>
+
+<p>I used a bit of what I had already written for Feather to create this, but I’ve spent most of today working on things like respecting the <a href="https://dev.twitter.com/terms/display-requirements">Twitter Display Requirements</a>. I’ll be able to reuse almost everything in Feather.</p>
+
+<!-- more -->
+
+
+<p></p>
+
+<p>Something I had to figure out how to do was modify the way links are displayed in a <code>TextView</code>. For tweet content, Twitter provides you with a way to display shortened links - “http://t.co/abcd” becomes “speakman.net.nz”. There are two ways to display links in an Android <code>TextView</code>. You can specify the <code>autoLink</code> <a href="http://developer.android.com/reference/android/widget/TextView.html#attr_android:autoLink">property</a> (which applies a regex to the text and automatically inserts links), or you can set the <a href="http://stackoverflow.com/questions/2734270/how-do-i-make-links-in-a-textview-clickable/2746708#2746708">movement method like so</a>, which handles HTML formatted links in the text.</p>
+
+<p>Now I had two use cases for clickable text. One of these was the username, the timestamp, etc - these I didn’t want to appear as links at all, they had to maintain their existing formatting (I could’ve just assigned a click handler to the view, but I feel this way is tidier than littering click handlers throughout <code>getView</code> in my adapter). The other use case was the links in tweet content, which I didn’t like the look of when they had the underline. I’ve <a href="https://gist.github.com/adamsp/7189653">written a class</a> to handle both these cases. It strips the <code>URLSpan</code> out and replaces it with an extension of that class, which modifies the way the link is displayed.</p>
+
+<p>The other thing I’ve written which I think might be of use is a way of handling these clicks within a DreamService. If you’ve got an Android Daydream that’s displaying links in a TextView, you just need to include <a href="https://gist.github.com/adamsp/7189623">this class</a> and then add your links as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">LinkMovementMethod</span> <span class="n">lmm</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DreamLinkMovementMethod</span><span class="o">(</span><span class="n">mDream</span><span class="o">);</span>
+</span><span class='line'><span class="n">TextView</span> <span class="n">someTextView</span> <span class="o">=</span> <span class="o">(</span><span class="n">TextView</span><span class="o">)</span><span class="n">findViewById</span><span class="o">(</span><span class="n">R</span><span class="o">.</span><span class="na">id</span><span class="o">.</span><span class="na">tweet_author_image</span><span class="o">);</span>
+</span><span class='line'><span class="n">someTextView</span><span class="o">.</span><span class="na">setMovementMethod</span><span class="o">(</span><span class="n">lmm</span><span class="o">);</span>
+</span><span class='line'><span class="n">someTextView</span><span class="o">.</span><span class="na">setText</span><span class="o">(</span><span class="n">Html</span><span class="o">.</span><span class="na">fromHtml</span><span class="o">(</span><span class="s">&quot;This is a &lt;a href=\&quot;http://www.google.com\&quot;&gt;Clickable Link&lt;/a&gt;, &quot;</span>
+</span><span class='line'>        <span class="o">+</span> <span class="s">&quot; accessible from a &lt;a href=\&quot;http://developer.android.com/reference/android/service/dreams/DreamService.html\&quot;&gt;Dream Service&lt;/a&gt;.&quot;</span><span class="o">));</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>DreamLinkMovementMethod</code> replicates the <code>onClick</code> behaviour of a <code>URLSpan</code>, except it  sets the <code>FLAG_ACTIVITY_NEW_TASK</code> flag on the <code>Intent</code> before it starts it.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 4]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/21/20-things-week-4/"/>
+    <updated>2013-10-21T21:34:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/10/21/20-things-week-4</id>
+    <content type="html"><![CDATA[<p>This week I&#8217;ve done a fair bit of work. I just finished a blog post on <a href="http://adamsp.github.com/speakman-website/blog/2013/10/21/android-currency-localisation-hell/">Currency localisation</a> which I&#8217;ve had on the back burner for some time - now I remember why, even writing that post gave me a headache. Currency formatting is a giant mess, as the formatting tables for most locales are pretty incomplete.</p>
+
+<p>I&#8217;ve also made some significant progress on Feather (my Twitter app). It now loads a timeline feed and a mentions feed, and saves &amp; loads those to a local database so that they&#8217;re pre-populated with the most recent data received when you first load the app. It can also post a new tweet (just a very basic <code>EditText</code> in a dialog at the moment), as well as Favourite/Unfavourite and Retweet tweets.</p>
+
+<p>The next step with Feather is to build a proper New Tweet dialog fragment, so it can handle Replys/New Tweets/quotes/share intents. Onwards!</p>
+]]></content>
+  </entry>
+  
+</feed>

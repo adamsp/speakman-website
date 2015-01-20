@@ -1,0 +1,178 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>20 Things, Week 2 - Adam Speakman</title>
+	<meta name="author" content="Adam">
+
+	
+	<meta name="description" content="Week 2 has not gone so well. I&#8217;ve managed to produce what I wanted (a MultiColumnListView control for Android), but I encountered more problems &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Adam Speakman" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">Adam Speakman</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
+		
+		
+		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
+		
+		
+		<a class="github" href="https://github.com/adamsp" title="GitHub">GitHub</a>
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">20 Things, Week 2</h2>
+	<div class="entry-content"><p>Week 2 has not gone so well. I&#8217;ve managed to produce what I wanted (a MultiColumnListView control for Android), but I encountered more problems than I expected. Really, I should&#8217;ve expected that. It&#8217;s software development we&#8217;re talking about here, after all.</p>
+
+<!-- more -->
+
+
+<p>I&#8217;ve been busy in the evenings this week (The Auckland .NET user group, and <a href="http://codemania.co.nz/">Codemania</a>, totally writing off two evenings, for a start), and had a couple of bad days at work - which doesn&#8217;t inspire one to write much code in the evenings. To go with my busy week, <a href="http://www.dia.govt.nz/Daylight-Saving">Daylight Saving</a> started last Sunday night, which meant I was more tired than usual all the time as well. Oh, and the NHL season started too - there went another few hours (and go the Canucks!).</p>
+
+<p>With all of that going on, I didn&#8217;t really get a whole lot done. I had a semi-working solution last week (didn&#8217;t have scroll clamping working, or view caching, or assorted other things), but I wasn&#8217;t really happy with it. I spent some time looking at the <code>ListView</code> source code, and realised that at some 3700 lines long (as at API level 18), I&#8217;d be better of reusing as much of that as possible.</p>
+
+<p>So I tried &#8216;wrapping&#8217; 1..N list views instead, with the idea being that for all incoming method calls I&#8217;d pass the request to either the correct view, or all views, depending on the request. Turns out there are a lot of public methods that need redirecting - I soon gave up on that. I was pretty disinterested in writing code at the time, so it&#8217;s possible that this approach still has potential. However…</p>
+
+<p>My &#8216;final&#8217; solution is similar to what I had at the end of last week (and indeed, similar to the one I wrote at the beginning of the year). It&#8217;s significantly more efficient than my original attempt (I understand how to use <code>onMeasure</code> and <code>onLayout</code> a lot better now), but it can definitely still be better. I need to handle saving instance state, scroll &#8216;fling&#8217;, and certain touch events, as well as generally cleaning up the code, as it&#8217;s pretty poor in a few places. On the plus side, it doesn&#8217;t over scroll past 0 or past the end, the number of columns can be supplied as an attribute in XML, and views are removed &amp; cached for re-use (like an adapter view should do).</p>
+
+<p>I tried to get it ready to put on Github tonight, but I couldn&#8217;t get Android Studio to do what I wanted - I tried importing the module to test in another project, but it wouldn&#8217;t work (I was getting &#8220;internal IDE errors&#8221;). Also, the custom attributes aren&#8217;t working, so I&#8217;ve decided to hold off on uploading this for now. If I can get it to a stage I&#8217;m happy with this week, I&#8217;ll put it up - I&#8217;d like to start on something else this week, though, so I&#8217;m not sure if that&#8217;ll happen.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-10-07T20:00:00-04:00" pubdate data-updated="true">Oct 7<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+
+
+</div>
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+		
+		
+		<a class="addthis_button_tweet"></a>
+		
+		
+		<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+		
+	</div>
+	
+	<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+	
+</div>
+
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Adam
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34453006-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+
+
+
+</body>
+</html>

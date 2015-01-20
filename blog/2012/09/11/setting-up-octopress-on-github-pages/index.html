@@ -1,0 +1,259 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Setting up Octopress on Github Pages - Adam Speakman</title>
+	<meta name="author" content="Adam">
+
+	
+	<meta name="description" content="There&#8217;s a lot of good information out there already on setting up Octopress on Github. The Octopress documentation covers the subject in depth &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Adam Speakman" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">Adam Speakman</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
+		
+		
+		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
+		
+		
+		<a class="github" href="https://github.com/adamsp" title="GitHub">GitHub</a>
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Setting up Octopress on Github Pages</h2>
+	<div class="entry-content"><p>There&#8217;s a lot of good information out there already on setting up Octopress on Github. The <a href="http://octopress.org/docs/deploying/github/">Octopress documentation</a> covers the subject in depth, as do assorted blog posts. However, perhaps it&#8217;s because I was drinking while doing it, or perhaps it was because I missed something while reading the guides, or my poor mental model of how things were supposed to work, or even that it was late at night, but I had a lot of trouble setting up <a href="http://www.whatsshaking.co.nz">What&#8217;s Shaking, NZ?</a> on Github Pages.</p>
+
+<!-- more -->
+
+
+<p>A few things to note:</p>
+
+<ol>
+<li>A lot of what I&#8217;ve done with setting up this website is completely new to me. I&#8217;ve never edited CSS before, for example &#8211; or ever owned a domain name. So if something is obvious to most, apologies if an explanation may seem unnecessary. I especially apologise if an explanation is wrong! Please let me know.</li>
+<li>If you want a guide to setting things up, this isn&#8217;t it. A lot of things I did here are <em>wrong</em>. This post is simply to point out some of the things I struggled with, in the hope that pointing out the right way to do things may be of help to someone else some day.</li>
+</ol>
+
+
+<p>Now, on to the post!</p>
+
+<h3>Intent</h3>
+
+<p>My intent was to host the website as a project page on a Github repo, using a custom domain. This repository would consist of a <code>master</code> branch with the source on it, and a <code>gh-pages</code> branch with the website on it. From there, I could have the www.whatsshaking.co.nz domain point at the right place and everything would all work splendidly. I spent a fair bit of time playing around with colours and layout and resizing locally (resizing the header was only possible thanks to <a href="http://blog.bigdinosaur.org/changing-octopresss-header/">Lee at Big Dinosaur</a>). When it was at a this-sucks-less-than-everything-else-I&#8217;ve-tried stage, I decided it was time to put it up online.</p>
+
+<p>I spent a bit of time poring over the <a href="http://octopress.org/docs/deploying/github/">Octopress documentation</a> as well as <a href="http://robdodson.me/blog/2012/04/30/custom-domain-with-octopress-and-github-pages/">this post by Rob Dodson</a>. I figured I was armed with enough knowledge to get this to work first time.</p>
+
+<p>My test setup on my local machine looked something like this:</p>
+
+<ul>
+<li>Octopress cloned into <code>~/Sites/wsnz</code> using the command on the site</li>
+<li><a href="http://pow.cx/">POW</a> running so I could access http://wsnz.dev locally and see the changes to my site as I made them, after running <code>rake watch</code></li>
+</ul>
+
+
+<p>What I wanted, was this:
+- Octopress WSNZ site in <code>~/Code/wsnz-website</code> with source on <code>master</code> branch and easy deployment to <code>gh-pages</code> branch
+- POW running the same as above, for easy local development</p>
+
+<p>So, with beer in hand and the internet at the ready I embarked on this adventure.</p>
+
+<h3>Following instructions</h3>
+
+<p>First of all, I wanted my code in a different place locally. So I created the repository on the Github site (<a href="https://github.com/adamsp/wsnz-website">adamsp/wsnz-website</a>) and cloned to <code>~/Code/wsnz-website</code> using the &#8216;Clone in Mac&#8217; button and the Github application. Then through the OS X Finder I copied the contents of <code>~/Sites/wsnz</code> into <code>~/Code/wsnz-website</code>. Importantly, this means I no longer have the original .git folder, so that explains why the <a href="https://github.com/adamsp/wsnz-website">wsnz-website repository</a> has no commit history (<s>where as the <a href="https://github.com/adamsp/adamsp.github.com">repo for this site</a> is a &#8216;proper&#8217; fork and does have the commit history</s> <strong>Edit 18 Sep 2012:</strong> <a href="https://github.com/adamsp/speakman-website">This site</a> ended up copy/pasted from that linked repo).</p>
+
+<p>Now my code was in the right place, I went ahead and did some other modifications. I changed my <code>_config.yml</code> file so that the URL property pointed at the domain, <code>url: www.whatsshaking.co.nz</code>, I added a <a href="https://github.com/dstufft/octopress/blob/9f40242b1e7eb0098f0ef3c508c7bed7e647b982/.gitignore">.gitignore</a>, added a Google Analytics ID, etc. I also did <code>echo 'www.whatsshaking.co.nz' &gt;&gt; source/CNAME</code>, as instructed in the guides, so I had a CNAME file with my site URL in it.</p>
+
+<p>I now ran <code>rake setup_github_pages</code> (with the git endpoint as <code>git@github.com:adamsp/wsnz-website</code>) &#8211; this changed my <code>_config.yml</code> and <code>Rakefile</code>. This is wrong!</p>
+
+<p>When I ran <code>rake deploy</code> I ended up with a broken website. I figured I should be able to see it at http://adamsp.github.com/wsnz-website &#8211; but that didn&#8217;t work. This was confusing, as everything appeared to be right on the <code>gh-pages</code> branch.</p>
+
+<h3>Fixing problems</h3>
+
+<p>I was looking through HTML in the <code>gh-pages</code> branch when I realised that the files weren&#8217;t at root. Checking back in my source again, it looked like everything in the config files was prefixed with <code>wsnz-website/</code>!</p>
+
+<p>The <code>setup_github_pages</code> command changed all the URLs to be prefixed with <code>wsnz-website/</code>. I had to go through and edit these out. So you should still have the following settings in these files:</p>
+
+<figure class='code'><figcaption><span>_config.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">subscribe_rss</span><span class="o">:</span> <span class="o">/</span><span class="nt">atom</span><span class="nc">.xml</span>
+</span><span class='line'><span class="nt">root</span><span class="o">:</span> <span class="o">/</span>
+</span><span class='line'><span class="nt">destination</span><span class="o">:</span> <span class="nt">public</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>Rakefile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">public_dir</span> <span class="o">=</span> <span class="s2">&quot;public&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>config.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">http_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span>
+</span><span class='line'><span class="n">http_images_path</span> <span class="o">=</span> <span class="s2">&quot;/images&quot;</span>
+</span><span class='line'><span class="n">http_fonts_path</span> <span class="o">=</span> <span class="s2">&quot;/fonts&quot;</span>
+</span><span class='line'><span class="n">css_dir</span> <span class="o">=</span> <span class="s2">&quot;public/stylesheets&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But oddly enough, things still weren&#8217;t working. Turns out, I had to leave the URL property in <code>_config.yml</code> as <code>url: http://adamsp.github.com/wsnz-website</code>.</p>
+
+<p>Once I did this and redeployed, everything worked as expected. I updated my link in <code>~/.pow</code> to point to <code>~/Code/wsnz-website</code> and I could access my site for local development again. Pushing blog posts and changes is now as simple as <code>rake generate</code> then <code>rake deploy</code>. Easy.</p>
+
+<h3>Specific issues</h3>
+
+<p>Anyway, after all of that, these are the issues I had, and their fixes/correct settings:</p>
+
+<ul>
+<li>The settings in <code>_config.yml</code> <em>require a space after the colon</em> or else the generate command fails.</li>
+<li>If you&#8217;re updating files in the sass folder and things don&#8217;t appear to be changing, you may need to delete <code>.sass_cache</code>.</li>
+<li>The <code>url</code> setting in <code>_config.yml</code> is the Github pages URL &#8211; eg <code>url: http://adamsp.github.com/wsnz-website</code>. This is true even if using a custom domain. See <a href="https://github.com/adamsp/wsnz-website/commit/44e66db6a834624089e06bbd9b60779881045aba">this commit</a> for what I mean.</li>
+<li>The paths in <code>_config.yml</code>, <code>config.rb</code> and <code>Rakefile</code> should <em>not</em> contain your sites repository name. eg <code>destination: public</code> and not <code>destination: wsnz-website/public</code>. The <code>rake setup_github_pages</code> command may put these settings there.</li>
+<li>The <code>CNAME</code> file should exist under the source folder, and then when deployed it will exist in the root of your <code>gh-pages</code> directory. This is required.</li>
+<li><a href="http://octopress.org/docs/deploying/github/#custom_domains">Setting up the DNS entries</a> is also required. With the <code>CNAME</code> file present you cannot access the site at the Github address. Note that you should just point it to <code>http://username.github.com</code> rather than <code>http://username.github.com/project-page</code>.</li>
+</ul>
+
+
+<p>Again, I must emphasise that most of this is fairly new to me. I&#8217;m sure most of these things are common knowledge, but not to me - and that means probably not to someone else.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-11T20:22:00-04:00" pubdate data-updated="true">Sep 11<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+		
+		
+		<a class="addthis_button_tweet"></a>
+		
+		
+		<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+		
+	</div>
+	
+	<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+	
+</div>
+
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Adam
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34453006-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+
+
+
+</body>
+</html>

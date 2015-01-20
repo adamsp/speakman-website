@@ -1,0 +1,278 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Localizing a Windows Phone (7) application - Adam Speakman</title>
+	<meta name="author" content="Adam">
+
+	
+	<meta name="description" content="I&#8217;ve been trying to clean up the What&#8217;s Shaking, NZ? for Windows Phone 7 codebase recently, as there was quite a bit of duplicated code &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Adam Speakman" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">Adam Speakman</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
+		
+		
+		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
+		
+		
+		<a class="github" href="https://github.com/adamsp" title="GitHub">GitHub</a>
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Localizing a Windows Phone (7) application</h2>
+	<div class="entry-content"><p>I&#8217;ve been trying to clean up the What&#8217;s Shaking, NZ? for Windows Phone 7 <a href="https://github.com/adamsp/wsnz-windowsphone">codebase</a> recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I&#8217;ll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.</p>
+
+<!-- more -->
+
+
+<p>One part of the clean up was localization. Localization of your resources is important, as it allows you to easily distribute your application in multiple languages without having to modify your code. Too few developers do this, and having an application display its content in the language of the device is a great way to make your users feel appreciated. I&#8217;ve done localization in Java previously, but never in .NET. I did some Googling and found a few guides, it was pretty simple:</p>
+
+<ul>
+<li>Add an <code>AppResources.resx</code> file (for your default language, as specified in Assembly Info for the project)</li>
+<li>Add some strings with keys</li>
+<li>Reference the keys in code wherever the strings are needed</li>
+<li>Additional languages are just <code>AppResources.xx-YY.resx</code>, where <code>xx</code> is the region and <code>YY</code> is the language. For example, <code>AppResources.de-DE.resx</code>. You can see the full list <a href="http://msdn.microsoft.com/en-us/library/hh202918(v=vs.92).aspx">here</a>.</li>
+<li>Finally edit the <code>*.csproj</code> file to include your newly supported languages.</li>
+</ul>
+
+
+<p>Pretty simple. However, the <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">guide</a> I was following didn&#8217;t detail how to handle the case where you had multiple projects. Oh dear. I couldn&#8217;t find anything online about supporting multiple projects - other than just having a new <code>AppResources.resx</code> file per project, which I didn&#8217;t want.</p>
+
+<p>As it turns out, it&#8217;s still very simple to do. Instead of adding the <code>AppResources.resx</code> file to the current project, just add a new project as a Windows Phone class library and then add the <code>AppResources.resx</code> file to that. Now, you can reference it from anywhere, provided you include a reference and a <code>using</code> statement from the other project back into the resources project:</p>
+
+<figure class='code'><figcaption><span>MainPage.xaml.cs </span><a href='https://github.com/adamsp/wsnz-windowsphone/blob/dev/WhatsShakingNZ/MainPage.xaml.cs#L43'>Source</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="k">using</span> <span class="nn">WhatsShakingNZ.Localization</span><span class="p">;</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="k">private</span> <span class="k">void</span> <span class="nf">InitializeApplicationBar</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ApplicationBarIconButton</span> <span class="n">refreshButton</span> <span class="p">=</span> <span class="k">new</span> <span class="n">ApplicationBarIconButton</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">refreshButton</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="n">AppResources</span><span class="p">.</span><span class="n">AppBarRefreshButtonText</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To access the resources from XAML, you need to add the following class to your resources library:</p>
+
+<figure class='code'><figcaption><span>LocalizedStrings.cs </span><a href='https://github.com/adamsp/wsnz-windowsphone/blob/dev/Localization/LocalizedStrings.cs'>Source</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="k">public</span> <span class="k">class</span> <span class="nc">LocalizedStrings</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="k">public</span> <span class="nf">LocalizedStrings</span><span class="p">()</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">private</span> <span class="k">static</span> <span class="n">AppResources</span> <span class="n">localizedResources</span> <span class="p">=</span> <span class="k">new</span> <span class="n">AppResources</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">public</span> <span class="n">AppResources</span> <span class="n">LocalizedResources</span> <span class="p">{</span> <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="n">localizedResources</span><span class="p">;</span> <span class="p">}</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You will also need to add the following to the <code>App.xaml</code> file (the guide I linked to above doesn&#8217;t detail all of this):</p>
+
+<figure class='code'><figcaption><span>App.xaml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Application</span>
+</span><span class='line'><span class="err">...</span>
+</span><span class='line'><span class="na">xmlns:local=</span><span class="s">&quot;clr-namespace:WhatsShakingNZ.Localization;assembly=WhatsShakingNZ.Localization&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;Application.Resources&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;local:LocalizedStrings</span> <span class="na">x:Key=</span><span class="s">&quot;LocalizedStrings&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>        ...
+</span><span class='line'>    <span class="nt">&lt;Application.Resources&gt;</span>
+</span><span class='line'>...
+</span><span class='line'><span class="nt">&lt;/Application&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And then to reference the resources in the XAML for each page, change anything that was using hardcoded text to use a binding as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;TextBlock</span> <span class="na">x:Name=</span><span class="s">&quot;PageTitle&quot;</span>
+</span><span class='line'>    <span class="na">Text=</span><span class="s">&quot;{Binding Path=LocalizedResources.PageTitleLatestQuakes, Source={StaticResource LocalizedStrings}}&quot;</span>
+</span><span class='line'>    <span class="na">Margin=</span><span class="s">&quot;9,-7,0,0&quot;</span>
+</span><span class='line'>    <span class="na">Style=</span><span class="s">&quot;{StaticResource PhoneTextTitle1Style}&quot;</span><span class="nt">/&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can see all of these changes in <a href="https://github.com/adamsp/wsnz-windowsphone/commit/49c511f9be2181955b3a5e7b06bf88068ec32ec4">this commit</a>.</p>
+
+<p>There are a few important gotchas with this:</p>
+
+<ul>
+<li>The DLL filename <strong>cannot end in &#8220;Resources&#8221;</strong>. I had some trouble with this, but I eventually found <a href="http://isolatedstorage.wordpress.com/2010/10/25/reserved-xap-file-names-resource-dll/">this blog post</a> detailing the fact there are some reserved file names in XAP files. Specifically, you can&#8217;t have DLLs ending in &#8216;Resources&#8217;. If you have named your project as &#8220;Resources&#8221;, everything will compile fine but your app will crash when it runs. It&#8217;s easy enough to fix - I renamed my project (and the properties that named the DLL) from <code>WhatsShakingNZ.Resources</code> to <code>WhatsShakingNZ.Localization</code>. After doing this, everything worked perfectly.</li>
+<li>You must specify the <code>AppResources.resx</code> Access Modifier as <code>public</code> or you won&#8217;t be able to access the resource properties:
+<img class="bottom" src="/images/wp7-localization/access_modifier.PNG"></li>
+<li>The default language as specified in the Assembly Information under the project Properties window is the one that your default <code>AppResources.resx</code> file is considered to be. If the device your application is running on is running any language other than your default, it will search for the resource string in the corresponding language resource file. If that resource file does not exist (or, if the specific key it is looking for does not exist in that region-specific file), then it will fall back to your default. This means you can have some strings localised and some not, even within the same page.</li>
+<li>To support additional languages, you have to add the <code>AppResources.xx-YY.resx</code> file, and also declare in the <code>.csproj</code> file for the <strong>main project</strong> that it supports the language (not the project containing your resource files). You have to edit this file manually in a text editor, as detailed in step 4 of <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">the guide linked above</a>. You can check out <a href="http://blogs.msdn.com/b/webdev/archive/2008/06/10/localizing-a-silverlight-application.aspx">this MSDN blog</a>, <a href="http://msdn.microsoft.com/en-us/library/dd941932(VS.95).aspx">this guide</a> or <a href="http://social.msdn.microsoft.com/Forums/en-US/vsx/thread/7e3267e4-ab1f-4fd0-90f4-d9292831bb2b/">this forum post</a> for a bit more information on how and why.</li>
+</ul>
+
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-20T08:49:00-05:00" pubdate data-updated="true">Nov 20<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/windows-phone/'>windows-phone</a>
+
+
+</div>
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+		
+		
+		<a class="addthis_button_tweet"></a>
+		
+		
+		<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+		
+	</div>
+	
+	<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+	
+</div>
+
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Adam
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34453006-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+
+
+
+</body>
+</html>

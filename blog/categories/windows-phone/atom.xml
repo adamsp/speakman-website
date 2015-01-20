@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: windows-phone | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/windows-phone/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2015-01-20T10:00:21-05:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Converting WP7 Maps to WP8]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8/"/>
+    <updated>2012-12-08T11:07:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8</id>
+    <content type="html"><![CDATA[<p>After <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207030.aspx">converting</a> a Windows Phone 7 application (<a href="http://www.whatsshaking.co.nz">What's Shaking, NZ?</a>) to Windows Phone 8, I noticed a few deprecation warnings around the Maps SDK. Converting the code to use the WP8 Maps SDK instead was fairly straightforward, but there were a few gotchas which I've covered in this post.</p>
+
+<!--more-->
+
+
+<p><em>Note: This post assumes you've already converted your Windows Phone 7 app to Windows Phone 8 and are wondering how to get rid of the deprecation messages.</em></p>
+
+<p><em>It covers converting your code to use the new Pushpins (assuming you were using the default ones previously - though a glance over the Windows Phone 7 custom Pushpin image docs indicates to me that it should be fairly straightforward to port those over as well, after a read through this), as well as the changes required in XAML.</em></p>
+
+<p><em>This post does not delve into displaying routes or providing directions, etc.</em></p>
+
+<p><img class="bottom" src="/images/wp7-maps-to-wp8-maps/maps_deprecated.PNG" title="Deprecation Warnings" ></p>
+
+<h3>Deleting old references</h3>
+
+<p>First, delete both the old <a href="http://phone.codeplex.com/">Windows Phone Toolkit</a> if you were using it (I was using it for the <code>ToggleSwitch</code> control), and the <code>Microsoft.Controls.Phone.Maps</code> library from your project references. If some of your other code breaks (ie, the ToggleSwitch), don't worry, we're going to fix that later.</p>
+
+<p>There will of course be references to these namespaces throughout your code. Feel free to delete these now, or as we go.</p>
+
+<p>While you're changing things in the Solution Explorer, you may as well update the WMAppManifest file - you need to include the new <code>IP_CAP_MAP</code> capability.</p>
+
+<p><img class="bottom" src="/images/wp7-maps-to-wp8-maps/maps_app_manifest.PNG" title="WMAppManifest" ></p>
+
+<h3>Changes to XAML</h3>
+
+<p>Next, edit your XAML to reference the new xmlns declaration:</p>
+
+<p><code>
+xmlns:maps="clr-namespace:Microsoft.Phone.Maps.Controls;assembly=Microsoft.Phone.Maps"
+</code></p>
+
+<p>Now your <code>&lt;maps /&gt;</code> tag will probably show up with some blue squiggly underlines, previously I had this on one of my Map pages:</p>
+
+<p>``` xml Old XAML
+&lt;maps:Map Grid.Row="1" Name="QuakeMap"     CredentialsProvider="your_maps_api_key_here"     ZoomLevel="5.3"     ZoomBarVisibility="Collapsed"    CopyrightVisibility="Collapsed"     LogoVisibility="Collapsed"     ScaleVisibility="Visible">    &lt;maps:Map.Center>        &lt;my:GeoCoordinate Altitude="NaN"</p>
+
+<pre><code>        Course="NaN" 
+        HorizontalAccuracy="NaN" 
+        Latitude="-41" 
+        Longitude="173" 
+        Speed="NaN" 
+        VerticalAccuracy="NaN" /&gt;    &lt;/maps:Map.Center&gt;&lt;/maps:Map&gt;
+</code></pre>
+
+<p>```</p>
+
+<p>However, my new XAML looks like this:</p>
+
+<p><code>xml New XAML
+&lt;maps:Map Grid.Row="1" Name="QuakeMap"           ZoomLevel="5.3"          Center="-41, 173"          Loaded="QuakeMap_Loaded"&gt;&lt;/maps:Map&gt;
+</code></p>
+
+<p>Much simpler, and all the previous properties I had marked as <code>Collapsed</code> are now collapsed by default (and no longer accessible).</p>
+
+<h3>Pushpins</h3>
+
+<p>Unfortunately the other part of the Maps that we're talking about today (the Pushpins) has become <em>more</em> complicated, not less. Where previously you would simply create a <code>Pushpin</code> object, assign it a location and some content (and perhaps an event listener), and then add it via a <code>Map.Children.Add(pin)</code> call, now it's not that simple.</p>
+
+<p>To add the Pushpins, we now need to download and reference the <em>new</em> WPToolkit via NuGet. Go on, I'll wait (the new one I used was published Oct 30 2012, was top result after searching for WPtoolkit). We need this for the Pushpins, as they are no longer included in the built-in Maps library (which is now located in the <code>Microsoft.Phone.Maps</code> assembly, as seen above). This should also fix any other issues you had where things from the previous Toolkit were no longer available (once you update your <code>using</code> statements).</p>
+
+<p>Once that's done, you can start fixing your existing Pushpin code. First, add a reference to the package you just downloaded:</p>
+
+<p><code>
+using Microsoft.Phone.Maps.Toolkit;
+</code></p>
+
+<p>The next thing you'll notice is that the <code>Location</code> property of the Pushpin no longer exists. It's now called <code>GeoCoordinate</code>, that's all. That should be all you need to change there:</p>
+
+<p><code>c# Pushpin code
+Pushpin pin = new Pushpin{    GeoCoordinate = quake.Location,    Content = quake.FormattedMagnitude};
+</code></p>
+
+<p>Now to add the pin, we need to:</p>
+
+<ol>
+<li>Create a <code>MapOverlay</code> object and add the pin to the overlay</li>
+<li>Create a <code>MapLayer</code> object and add the overlay to the layer</li>
+<li>Add the <code>MapLayer</code> to the <code>Layers</code> property of the map</li>
+</ol>
+
+
+<p>So let's do that:</p>
+
+<p><code>
+MapOverlay overlay = new MapOverlay();overlay.Content = pin;overlay.GeoCoordinate = quake.Location;overlay.PositionOrigin = new Point(0, 1);
+MapLayer layer = new MapLayer();layer.Add(overlay);
+QuakeMap.Layers.Add(layer);
+</code></p>
+
+<p>A few things to note here:</p>
+
+<ul>
+<li>Setting the <code>MapOverlay.PositionOrigin</code> is the point in your overlays content you would like centered on the <code>GeoCoordinate</code>. The overlay has (0,0) as top left, and (1,1) as bottom right of your content. Since we're using the old Pushpin image, we want (0,1) for bottom left. If (for example) you had an arrow pointing from left-to-right and you wanted the tip of the arrow to be pointing at the location, you would specify <code>overlay.PositionOrigin = new Point(1, 0.5);</code> for the center of the right-hand side.</li>
+<li>A Map can have multiple <code>MapLayer</code>s</li>
+<li>A <code>MapLayer</code> can have multiple <code>MapOverlay</code>s</li>
+<li>We have to specify the <code>GeoCoordinate</code> property twice - once for the <code>Pushpin</code> itself, and once for the <code>MapOverlay</code> it's going into.</li>
+</ul>
+
+
+<p>If you're adding multiple pins simultaneously, you may want to add them in separate layers or on the same layer. I've opted for inserting all pins on the same layer, as I've found this exhibits the same behaviour I was experiencing previously - pins added later appear on top - so I've found no reason to experiment.</p>
+
+<p>For further reading, check out the <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207045(v=vs.105).aspx">Windows Phone Dev Center</a>.</p>
+
+<h3>Maps API Key</h3>
+
+<p>You may have noticed earlier that you no longer specify the <code>CredentialsProvider</code> in the XAML. Instead we have an event handler for the <code>Loaded</code> event on the map. As <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207033(v=vs.105).aspx#BKMK_appidandtoken">detailed on MSDN</a> we now specify an ApplicationID and AuthenticationToken in code. This looks to be very simple, though I haven't tried it yet (as you get the ApplicationID and AuthenticationToken during the app submission process).</p>
+
+<p><code>c# Map.Loaded Event Handler
+private void QuakeMap_Loaded(object sender, RoutedEventArgs e){    Microsoft.Phone.Maps.MapsSettings.ApplicationContext.ApplicationId = "ApplicationID";    Microsoft.Phone.Maps.MapsSettings.ApplicationContext.AuthenticationToken = "AuthenticationToken";}
+</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Localizing a Windows Phone (7) application]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application/"/>
+    <updated>2012-11-20T08:49:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application</id>
+    <content type="html"><![CDATA[<p>I've been trying to clean up the What's Shaking, NZ? for Windows Phone 7 <a href="https://github.com/adamsp/wsnz-windowsphone">codebase</a> recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I'll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.</p>
+
+<!-- more -->
+
+
+<p>One part of the clean up was localization. Localization of your resources is important, as it allows you to easily distribute your application in multiple languages without having to modify your code. Too few developers do this, and having an application display its content in the language of the device is a great way to make your users feel appreciated. I've done localization in Java previously, but never in .NET. I did some Googling and found a few guides, it was pretty simple:</p>
+
+<ul>
+<li>Add an <code>AppResources.resx</code> file (for your default language, as specified in Assembly Info for the project)</li>
+<li>Add some strings with keys</li>
+<li>Reference the keys in code wherever the strings are needed</li>
+<li>Additional languages are just <code>AppResources.xx-YY.resx</code>, where <code>xx</code> is the region and <code>YY</code> is the language. For example, <code>AppResources.de-DE.resx</code>. You can see the full list <a href="http://msdn.microsoft.com/en-us/library/hh202918(v=vs.92).aspx">here</a>.</li>
+<li>Finally edit the <code>*.csproj</code> file to include your newly supported languages.</li>
+</ul>
+
+
+<p>Pretty simple. However, the <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">guide</a> I was following didn't detail how to handle the case where you had multiple projects. Oh dear. I couldn't find anything online about supporting multiple projects - other than just having a new <code>AppResources.resx</code> file per project, which I didn't want.</p>
+
+<p>As it turns out, it's still very simple to do. Instead of adding the <code>AppResources.resx</code> file to the current project, just add a new project as a Windows Phone class library and then add the <code>AppResources.resx</code> file to that. Now, you can reference it from anywhere, provided you include a reference and a <code>using</code> statement from the other project back into the resources project:</p>
+
+<p>``` c# MainPage.xaml.cs https://github.com/adamsp/wsnz-windowsphone/blob/dev/WhatsShakingNZ/MainPage.xaml.cs#L43 Source</p>
+
+<p>using WhatsShakingNZ.Localization;
+...
+private void InitializeApplicationBar()
+{</p>
+
+<pre><code>ApplicationBarIconButton refreshButton = new ApplicationBarIconButton();
+refreshButton.Text = AppResources.AppBarRefreshButtonText;
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>To access the resources from XAML, you need to add the following class to your resources library:</p>
+
+<p>``` c# LocalizedStrings.cs https://github.com/adamsp/wsnz-windowsphone/blob/dev/Localization/LocalizedStrings.cs Source
+public class LocalizedStrings
+{</p>
+
+<pre><code>public LocalizedStrings()
+{
+}
+
+private static AppResources localizedResources = new AppResources();
+
+public AppResources LocalizedResources { get { return localizedResources; } }
+</code></pre>
+
+<p>}
+```</p>
+
+<p>You will also need to add the following to the <code>App.xaml</code> file (the guide I linked to above doesn't detail all of this):</p>
+
+<p>``` xml App.xaml
+<Application
+...
+xmlns:local="clr-namespace:WhatsShakingNZ.Localization;assembly=WhatsShakingNZ.Localization" /></p>
+
+<pre><code>&lt;Application.Resources&gt;
+    &lt;local:LocalizedStrings x:Key="LocalizedStrings" /&gt;
+    ...
+&lt;Application.Resources&gt;
+</code></pre>
+
+<p>...
+</Application>
+```</p>
+
+<p>And then to reference the resources in the XAML for each page, change anything that was using hardcoded text to use a binding as follows:</p>
+
+<p>``` xml
+&lt;TextBlock x:Name="PageTitle"</p>
+
+<pre><code>Text="{Binding Path=LocalizedResources.PageTitleLatestQuakes, Source={StaticResource LocalizedStrings}}" 
+Margin="9,-7,0,0" 
+Style="{StaticResource PhoneTextTitle1Style}"/&gt;
+</code></pre>
+
+<p>```</p>
+
+<p>You can see all of these changes in <a href="https://github.com/adamsp/wsnz-windowsphone/commit/49c511f9be2181955b3a5e7b06bf88068ec32ec4">this commit</a>.</p>
+
+<p>There are a few important gotchas with this:</p>
+
+<ul>
+<li>The DLL filename <strong>cannot end in "Resources"</strong>. I had some trouble with this, but I eventually found <a href="http://isolatedstorage.wordpress.com/2010/10/25/reserved-xap-file-names-resource-dll/">this blog post</a> detailing the fact there are some reserved file names in XAP files. Specifically, you can't have DLLs ending in 'Resources'. If you have named your project as "Resources", everything will compile fine but your app will crash when it runs. It's easy enough to fix - I renamed my project (and the properties that named the DLL) from <code>WhatsShakingNZ.Resources</code> to <code>WhatsShakingNZ.Localization</code>. After doing this, everything worked perfectly.</li>
+<li>You must specify the <code>AppResources.resx</code> Access Modifier as <code>public</code> or you won't be able to access the resource properties:
+<img class="bottom" src="/images/wp7-localization/access_modifier.PNG"></li>
+<li>The default language as specified in the Assembly Information under the project Properties window is the one that your default <code>AppResources.resx</code> file is considered to be. If the device your application is running on is running any language other than your default, it will search for the resource string in the corresponding language resource file. If that resource file does not exist (or, if the specific key it is looking for does not exist in that region-specific file), then it will fall back to your default. This means you can have some strings localised and some not, even within the same page.</li>
+<li>To support additional languages, you have to add the <code>AppResources.xx-YY.resx</code> file, and also declare in the <code>.csproj</code> file for the <strong>main project</strong> that it supports the language (not the project containing your resource files). You have to edit this file manually in a text editor, as detailed in step 4 of <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">the guide linked above</a>. You can check out <a href="http://blogs.msdn.com/b/webdev/archive/2008/06/10/localizing-a-silverlight-application.aspx">this MSDN blog</a>, <a href="http://msdn.microsoft.com/en-us/library/dd941932(VS.95).aspx">this guide</a> or <a href="http://social.msdn.microsoft.com/Forums/en-US/vsx/thread/7e3267e4-ab1f-4fd0-90f4-d9292831bb2b/">this forum post</a> for a bit more information on how and why.</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

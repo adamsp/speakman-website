@@ -1,0 +1,475 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration - Adam Speakman</title>
+	<meta name="author" content="Adam">
+
+	
+	<meta name="description" content="Ever used a FragmentStatePagerAdapter? We&#8217;re using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Adam Speakman" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">Adam Speakman</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
+		
+		
+		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
+		
+		
+		<a class="github" href="https://github.com/adamsp" title="GitHub">GitHub</a>
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration</h2>
+	<div class="entry-content"><p>Ever used a <a href="https://developer.android.com/reference/android/support/v4/app/FragmentStatePagerAdapter.html"><code>FragmentStatePagerAdapter</code></a>? We&#8217;re using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress to the next page once they&#8217;ve completed the current one. We control this by manipulating the stack of pages and notifying the adapter that the data has changed when a new page is available.</p>
+
+<p>Unfortunately, when changing pages that have already been loaded, there&#8217;s an unexpected bug. Specifically, when you load a page, remove it and then insert a new one in its place, the next time the fragment at that index is loaded, it receives the <code>savedInstanceState</code> bundle for the <em>old</em> fragment.</p>
+
+<!-- more -->
+
+
+<h1>How&#8217;d you find <em>that</em>?</h1>
+
+<p>The specific use case where I discovered this was the case where a customer is purchasing tickets to a film, and they change their mind about which type of tickets they want.</p>
+
+<p>First, the customer selects tickets that require manually selected seats. We save the tickets, receive the seating data, and send the customer to the next page where they can select from a seat in a map.</p>
+
+<p>If the customer changes their mind at this stage and returns to the previous page, as soon as they make a change to their selected tickets we consider all future pages invalid. We &#8216;remove&#8217; the seat selection fragment and notify the adapter. If the customer has now selected tickets that <em>don&#8217;t</em> require manual seat selection (that is, they&#8217;ve chosen tickets for an unallocated seating area), we save the tickets, receive empty seating data, and know to send them on to the &#8220;details&#8221; page where they can enter in their name and email.</p>
+
+<p>This is where the process breaks down. Since the two fragments are different (one&#8217;s called <code>SeatingFragment</code> and the other is <code>CustomerDetailsFragment</code>, say), I wasn&#8217;t expecting to receive any saved instance state on the first load of the new fragment - however I was getting state passed in! This caused a crash, as I was depending on the state being null to assume first-load.</p>
+
+<p>The state I was seeing was the state for the previously loaded fragment at that index. That is, when the <code>CustomerDetailsFragment</code> in the example scenario was loaded (replacing the <code>SeatingFragment</code>), it was receiving the saved state bundle for the <code>SeatingFragment</code>, when it should&#8217;ve been receiving no saved state bundle at all.</p>
+
+<h1>Can you reproduce it?</h1>
+
+<p>I&#8217;ve written a <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">very simple example app</a> which shows this behaviour. If you swipe backwards and forwards you can see the fragments labeled &#8220;1&#8221;, &#8220;2&#8221;, &#8220;3&#8221;, colored Red, Yellow and Green. Now, press the &#8216;Switch Fragment&#8217; button. You&#8217;ll be sent back to index 0 (fragment &#8220;1&#8221;). This forces the removal of fragment &#8220;3&#8221;, which gets its state saved. But we&#8217;ve changed the content of the adapter - so next time you load fragment &#8220;3&#8221;, you&#8217;ll see that its color has changed to Blue. <strong>This is a different fragment</strong>, but it&#8217;s label has been restored from the previous fragments saved state! If you rotate your device, or simply swipe back to the first view and then back to the third again, you&#8217;ll see the correct label of &#8220;4&#8221; (it saves the state fresh when it removes it, resulting in the correct saved state next time it&#8217;s loaded).</p>
+
+<h1>Why does this occur?</h1>
+
+<p>If we take a look at the source code <a href="https://android.googlesource.com/platform/frameworks/support/+/6d6186b9a2503200844febe1b8ba083206c7cbcd/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">as of this writing</a>, we can see that the <code>FragmentStatePagerAdapter</code> stores a list of states:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>private ArrayList&lt;Fragment.SavedState&gt; mSavedState = new ArrayList&lt;Fragment.SavedState&gt;();</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Looking through the code we can see that this array is used in four places. It&#8217;s used in <code>instantiateItem</code>, <code>destroyItem</code>, <code>saveState</code> and <code>restoreState</code>.  We can ignore <code>saveState</code> and <code>restoreState</code> for now, as they&#8217;re just saving the adapters overall state into an external bundle, and then loading it back up.</p>
+
+<p>First, let&#8217;s take a look at what&#8217;s going on in <code>destroyItem</code>. When a fragment is due to be destroyed, this method first starts a transaction (if one isn&#8217;t already started), then pads out the <code>mSavedState</code> array with null entries until it&#8217;s at least the size of the index of the fragment we&#8217;re removing.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public void destroyItem(ViewGroup container, int position, Object object) {
+</span><span class='line'>    Fragment fragment = (Fragment)object;
+</span><span class='line'>
+</span><span class='line'>    if (mCurTransaction == null) {
+</span><span class='line'>        mCurTransaction = mFragmentManager.beginTransaction();
+</span><span class='line'>    }
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+</span><span class='line'>            + " v=" + ((Fragment)object).getView());
+</span><span class='line'>    while (mSavedState.size() &lt;= position) {
+</span><span class='line'>        mSavedState.add(null);
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing too exciting there. It then saves the state of the fragment that is being removed into the corresponding index in the <code>mSavedState</code> list, and removes the fragment:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+</span><span class='line'>    mFragments.set(position, null);
+</span><span class='line'>
+</span><span class='line'>    mCurTransaction.remove(fragment);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now let&#8217;s see what happens in the other direction - instantiating an item. First thing to do is check and see if we already have a <code>Fragment</code> object created and stored at the given position. Short-circuit back out with this if we do:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public Object instantiateItem(ViewGroup container, int position) {
+</span><span class='line'>    // If we already have this item instantiated, there is nothing
+</span><span class='line'>    // to do.  This can happen when we are restoring the entire pager
+</span><span class='line'>    // from its saved state, where the fragment manager has already
+</span><span class='line'>    // taken care of restoring the fragments we previously had instantiated.
+</span><span class='line'>    if (mFragments.size() &gt; position) {
+</span><span class='line'>        Fragment f = mFragments.get(position);
+</span><span class='line'>        if (f != null) {
+</span><span class='line'>            return f;
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If however we <em>don&#8217;t</em> have a fragment there, we have to create one. This could be because we&#8217;ve never seen this page of the <code>ViewPager</code> before, or it could be because the page was removed due to the left/right limits (recall a <code>ViewPager</code> will only keep the first page to the left and right of the current one, by default).</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (mCurTransaction == null) {
+</span><span class='line'>        mCurTransaction = mFragmentManager.beginTransaction();
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>    Fragment fragment = getItem(position);
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, here&#8217;s the important part. After we&#8217;ve asked our concrete subclass to create/instantiate a fragment for us (through the <code>getItem(position)</code> call), we check to see if we have any saved state <em>at that position</em>. There&#8217;s the crucial part - we&#8217;re <strong>checking for saved state based on the fragments index in an array, rather than on some unique property of the fragment</strong>.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (mSavedState.size() &gt; position) {
+</span><span class='line'>        Fragment.SavedState fss = mSavedState.get(position);
+</span><span class='line'>        if (fss != null) {
+</span><span class='line'>            fragment.setInitialSavedState(fss);
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The issue with this is that the fragment at that position may no longer be the same fragment as was there last time we displayed the page at this position! So that saved state bundle may no longer be the correct one.</p>
+
+<p>Finally, we add the fragment to our list of fragments and display it:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    while (mFragments.size() &lt;= position) {
+</span><span class='line'>        mFragments.add(null);
+</span><span class='line'>    }
+</span><span class='line'>    fragment.setMenuVisibility(false);
+</span><span class='line'>    fragment.setUserVisibleHint(false);
+</span><span class='line'>    mFragments.set(position, fragment);
+</span><span class='line'>    mCurTransaction.add(container.getId(), fragment);
+</span><span class='line'>
+</span><span class='line'>    return fragment;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Fixes or workarounds?</h1>
+
+<p>Luckily, there&#8217;s a way around this problem! Hurrah!</p>
+
+<p>We simply need some way of identifying the fragments, and comparing whether this identifying value is the same or not when we try to restore state to a freshly instantiated fragment. The best way to do this is to ask our concrete subclass for an identifier for this fragment - a tag.</p>
+
+<p>So, let&#8217;s copy the <a href="https://android.googlesource.com/platform/frameworks/support/+/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">entire source of <code>FragmentStatePagerAdapter</code></a> and get started. First thing to do is add a way of getting tags from our subclasses. Since we don&#8217;t want to break existing implementations that don&#8217;t actually care about swapping out fragments, we won&#8217;t make this method abstract. Instead it&#8217;ll just <code>return null;</code> by default, and we treat that as the default case, reproducing existing behaviour.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>public String getTag(int position) {
+</span><span class='line'>    return null;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ok, so now we have a way of getting the tags, let&#8217;s add an <code>ArrayList&lt;String&gt;</code> member variable to track our fragment tags:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>private ArrayList&lt;String&gt; mSavedFragmentTags = new ArrayList&lt;String&gt;();</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we go through and handle this in all 4 places where <code>mSavedState</code> is touched.</p>
+
+<p>In <code>instantiateItem</code> we must find the tag for the newly instantiated fragment first. Once we&#8217;ve got that, if we have saved state we can then compare this new tag with the saved tag. If they match, then we restore the state! If they don&#8217;t, then we don&#8217;t restore state. Easy.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    Fragment fragment = getItem(position);
+</span><span class='line'>    String fragmentTag = getTag(position);
+</span><span class='line'>    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment + " t=" + fragmentTag);
+</span><span class='line'>    if (mSavedState.size() &gt; position) {
+</span><span class='line'>        String savedTag = mSavedFragmentTags.get(position);
+</span><span class='line'>        if (TextUtils.equals(fragmentTag, savedTag)) {
+</span><span class='line'>            Fragment.SavedState fss = mSavedState.get(position);
+</span><span class='line'>            if (fss != null) {
+</span><span class='line'>                fragment.setInitialSavedState(fss);
+</span><span class='line'>            }
+</span><span class='line'>        }
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that we also add the fragment using the <a href="https://developer.android.com/reference/android/support/v4/app/FragmentTransaction.html#add(int,"><code>FragmentTransaction#add (int containerViewId, Fragment fragment, String tag)</code></a> signature - that is, we actually use the tag when adding our fragment:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mCurTransaction.add(container.getId(), fragment, fragmentTag);
+</span><span class='line'>
+</span><span class='line'>    return fragment;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In <code>destroyItem</code> we just mirror what&#8217;s done to <code>mSavedState</code>. We pad it out if necessary&#8230;</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+</span><span class='line'>            + " v=" + ((Fragment)object).getView() + " t=" + fragment.getTag());
+</span><span class='line'>    while (mSavedState.size() &lt;= position) {
+</span><span class='line'>        mSavedState.add(null);
+</span><span class='line'>        mSavedFragmentTags.add(null);
+</span><span class='line'>    }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>&#8230;then we save the tag at that location.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+</span><span class='line'>    mSavedFragmentTags.set(position, fragment.getTag());
+</span><span class='line'>    mFragments.set(position, null);
+</span><span class='line'>
+</span><span class='line'>    mCurTransaction.remove(fragment);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally we have the <code>saveState</code> and <code>restoreState</code> methods. These are pretty trival changes. In <code>saveState</code> we put the saved fragment tags into the <code>Bundle</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>state.putStringArrayList("tags", mSavedFragmentTags);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And then in <code>restoreState</code>, surprise, we restore the saved fragment tags from the bundle:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mSavedFragmentTags = bundle.getStringArrayList("tags");</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Two last things to do:</p>
+
+<ul>
+<li>Change your subclass to override your new, fixed, adapter (rather than the one in the support library)</li>
+<li>Remember to <strong>override <code>getTag(int position)</code></strong> to return a unique tag for each fragment</li>
+</ul>
+
+
+<p>If you forget either of these things, you&#8217;ll just have the same behaviour as before. In my <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">demo app</a>, this would look something like the following - obviously you&#8217;ll need to adjust this to suit your own data source:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>@Override
+</span><span class='line'>public String getTag(int position) {
+</span><span class='line'>    return labels[position];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And that&#8217;s it! Those&#8217;re the changes we need to make to the <code>FragmentStatePagerAdapter</code> for it to stop misbehaving and restoring the wrong state to fragments in different locations.</p>
+
+<p>You can find a complete example of this fixed class <a href="https://github.com/adamsp/FragmentStatePagerIssueExample/blob/master/app/src/main/java/com/example/fragmentstatepagerissueexample/app/FixedFragmentStatePagerAdapter.java">in the sample project</a>. There&#8217;s some lines commented out in the adapter in <code>MainActivity</code>; just swap the class definition and uncomment the method and you&#8217;ve magically got an adapter working as expected!</p>
+
+<h1>That&#8217;s great! Any gotchas?</h1>
+
+<p>Sure are.</p>
+
+<ul>
+<li>Remember to override <code>getTag(int position)</code>, or else you&#8217;ll continue to see the old behaviour.</li>
+<li><code>getTag(int position)</code> must return a <em>unique</em> tag for each fragment.</li>
+<li>If your <code>FragmentStatePagerAdapter</code> is an inner class of a <code>Fragment</code>, <em>and</em> you&#8217;re calling that fragments <code>getTag()</code> method, then that call will now give a compile error. You&#8217;ll need to change it to <code>MyParentFragment.this.getTag()</code> instead, <em>or</em> change the fixed adapter to use a different method signature - <code>getFragmentTag(int position)</code>, perhaps.</li>
+<li>You won&#8217;t automatically receive bug fixes and updates to the <code>FragmentStatePagerAdapter</code> when the support library updates. This is unlikely to be an issue though - it&#8217;s been in source for <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">over 18 months as of this writing</a> (Feb 20, 2014) without a single change (the <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v13/java/android/support/v13/app/FragmentStatePagerAdapter.java">v13 version, too</a>).</li>
+<li>If you want to use a different key to put the saved tags into/restore from the bundle (other than just &#8220;tags&#8221; like I&#8217;ve used here), make sure it doesn&#8217;t start with &#8220;f&#8221; - note how a little further down in the <code>restoreState</code> method it checks for keys starting with &#8220;f&#8221; and assumes they&#8217;re fragments!</li>
+</ul>
+
+
+<h1>Thanks! You saved the day.</h1>
+
+<p>No worries! Maybe one day you&#8217;ll write a post on how to fix some obscure bug that I&#8217;m having trouble with.</p>
+
+<p>If you have any questions, you can ask me on <a href="https://twitter.com/adamsnz">Twitter</a>, or <a href="https://plus.google.com/+AdamSpeakman">Google+</a>, or open an issue on (or send a pull request to) the <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">Github project</a>.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-20T21:25:00-05:00" pubdate data-updated="true">Feb 20<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/open-source/'>open-source</a>
+
+
+</div>
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+		
+		
+		<a class="addthis_button_tweet"></a>
+		
+		
+		<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+		
+	</div>
+	
+	<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+	
+</div>
+
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Adam
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34453006-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+
+
+
+</body>
+</html>

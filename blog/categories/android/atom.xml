@@ -1,0 +1,941 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: android | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/android/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2015-01-20T10:00:21-05:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration/"/>
+    <updated>2014-02-20T21:25:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration</id>
+    <content type="html"><![CDATA[<p>Ever used a <a href="https://developer.android.com/reference/android/support/v4/app/FragmentStatePagerAdapter.html"><code>FragmentStatePagerAdapter</code></a>? We're using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress to the next page once they've completed the current one. We control this by manipulating the stack of pages and notifying the adapter that the data has changed when a new page is available.</p>
+
+<p>Unfortunately, when changing pages that have already been loaded, there's an unexpected bug. Specifically, when you load a page, remove it and then insert a new one in its place, the next time the fragment at that index is loaded, it receives the <code>savedInstanceState</code> bundle for the <em>old</em> fragment.</p>
+
+<!-- more -->
+
+
+<h1>How'd you find <em>that</em>?</h1>
+
+<p>The specific use case where I discovered this was the case where a customer is purchasing tickets to a film, and they change their mind about which type of tickets they want.</p>
+
+<p>First, the customer selects tickets that require manually selected seats. We save the tickets, receive the seating data, and send the customer to the next page where they can select from a seat in a map.</p>
+
+<p>If the customer changes their mind at this stage and returns to the previous page, as soon as they make a change to their selected tickets we consider all future pages invalid. We 'remove' the seat selection fragment and notify the adapter. If the customer has now selected tickets that <em>don't</em> require manual seat selection (that is, they've chosen tickets for an unallocated seating area), we save the tickets, receive empty seating data, and know to send them on to the "details" page where they can enter in their name and email.</p>
+
+<p>This is where the process breaks down. Since the two fragments are different (one's called <code>SeatingFragment</code> and the other is <code>CustomerDetailsFragment</code>, say), I wasn't expecting to receive any saved instance state on the first load of the new fragment - however I was getting state passed in! This caused a crash, as I was depending on the state being null to assume first-load.</p>
+
+<p>The state I was seeing was the state for the previously loaded fragment at that index. That is, when the <code>CustomerDetailsFragment</code> in the example scenario was loaded (replacing the <code>SeatingFragment</code>), it was receiving the saved state bundle for the <code>SeatingFragment</code>, when it should've been receiving no saved state bundle at all.</p>
+
+<h1>Can you reproduce it?</h1>
+
+<p>I've written a <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">very simple example app</a> which shows this behaviour. If you swipe backwards and forwards you can see the fragments labeled "1", "2", "3", colored Red, Yellow and Green. Now, press the 'Switch Fragment' button. You'll be sent back to index 0 (fragment "1"). This forces the removal of fragment "3", which gets its state saved. But we've changed the content of the adapter - so next time you load fragment "3", you'll see that its color has changed to Blue. <strong>This is a different fragment</strong>, but it's label has been restored from the previous fragments saved state! If you rotate your device, or simply swipe back to the first view and then back to the third again, you'll see the correct label of "4" (it saves the state fresh when it removes it, resulting in the correct saved state next time it's loaded).</p>
+
+<h1>Why does this occur?</h1>
+
+<p>If we take a look at the source code <a href="https://android.googlesource.com/platform/frameworks/support/+/6d6186b9a2503200844febe1b8ba083206c7cbcd/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">as of this writing</a>, we can see that the <code>FragmentStatePagerAdapter</code> stores a list of states:</p>
+
+<p><code>
+private ArrayList&lt;Fragment.SavedState&gt; mSavedState = new ArrayList&lt;Fragment.SavedState&gt;();
+</code></p>
+
+<p>Looking through the code we can see that this array is used in four places. It's used in <code>instantiateItem</code>, <code>destroyItem</code>, <code>saveState</code> and <code>restoreState</code>.  We can ignore <code>saveState</code> and <code>restoreState</code> for now, as they're just saving the adapters overall state into an external bundle, and then loading it back up.</p>
+
+<p>First, let's take a look at what's going on in <code>destroyItem</code>. When a fragment is due to be destroyed, this method first starts a transaction (if one isn't already started), then pads out the <code>mSavedState</code> array with null entries until it's at least the size of the index of the fragment we're removing.</p>
+
+<p>```</p>
+
+<pre><code>@Override
+public void destroyItem(ViewGroup container, int position, Object object) {
+    Fragment fragment = (Fragment)object;
+
+    if (mCurTransaction == null) {
+        mCurTransaction = mFragmentManager.beginTransaction();
+    }
+    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+            + " v=" + ((Fragment)object).getView());
+    while (mSavedState.size() &lt;= position) {
+        mSavedState.add(null);
+    }
+</code></pre>
+
+<p>```</p>
+
+<p>Nothing too exciting there. It then saves the state of the fragment that is being removed into the corresponding index in the <code>mSavedState</code> list, and removes the fragment:</p>
+
+<p>```</p>
+
+<pre><code>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+    mFragments.set(position, null);
+
+    mCurTransaction.remove(fragment);
+}
+</code></pre>
+
+<p>```</p>
+
+<p>Now let's see what happens in the other direction - instantiating an item. First thing to do is check and see if we already have a <code>Fragment</code> object created and stored at the given position. Short-circuit back out with this if we do:</p>
+
+<p>```</p>
+
+<pre><code>@Override
+public Object instantiateItem(ViewGroup container, int position) {
+    // If we already have this item instantiated, there is nothing
+    // to do.  This can happen when we are restoring the entire pager
+    // from its saved state, where the fragment manager has already
+    // taken care of restoring the fragments we previously had instantiated.
+    if (mFragments.size() &gt; position) {
+        Fragment f = mFragments.get(position);
+        if (f != null) {
+            return f;
+        }
+    }
+</code></pre>
+
+<p>```</p>
+
+<p>If however we <em>don't</em> have a fragment there, we have to create one. This could be because we've never seen this page of the <code>ViewPager</code> before, or it could be because the page was removed due to the left/right limits (recall a <code>ViewPager</code> will only keep the first page to the left and right of the current one, by default).</p>
+
+<p>```</p>
+
+<pre><code>    if (mCurTransaction == null) {
+        mCurTransaction = mFragmentManager.beginTransaction();
+    }
+
+    Fragment fragment = getItem(position);
+    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment);
+</code></pre>
+
+<p>```</p>
+
+<p>Now, here's the important part. After we've asked our concrete subclass to create/instantiate a fragment for us (through the <code>getItem(position)</code> call), we check to see if we have any saved state <em>at that position</em>. There's the crucial part - we're <strong>checking for saved state based on the fragments index in an array, rather than on some unique property of the fragment</strong>.</p>
+
+<p>```</p>
+
+<pre><code>    if (mSavedState.size() &gt; position) {
+        Fragment.SavedState fss = mSavedState.get(position);
+        if (fss != null) {
+            fragment.setInitialSavedState(fss);
+        }
+    }
+</code></pre>
+
+<p>```</p>
+
+<p>The issue with this is that the fragment at that position may no longer be the same fragment as was there last time we displayed the page at this position! So that saved state bundle may no longer be the correct one.</p>
+
+<p>Finally, we add the fragment to our list of fragments and display it:</p>
+
+<p>```</p>
+
+<pre><code>    while (mFragments.size() &lt;= position) {
+        mFragments.add(null);
+    }
+    fragment.setMenuVisibility(false);
+    fragment.setUserVisibleHint(false);
+    mFragments.set(position, fragment);
+    mCurTransaction.add(container.getId(), fragment);
+
+    return fragment;
+}
+</code></pre>
+
+<p>```</p>
+
+<h1>Fixes or workarounds?</h1>
+
+<p>Luckily, there's a way around this problem! Hurrah!</p>
+
+<p>We simply need some way of identifying the fragments, and comparing whether this identifying value is the same or not when we try to restore state to a freshly instantiated fragment. The best way to do this is to ask our concrete subclass for an identifier for this fragment - a tag.</p>
+
+<p>So, let's copy the <a href="https://android.googlesource.com/platform/frameworks/support/+/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">entire source of <code>FragmentStatePagerAdapter</code></a> and get started. First thing to do is add a way of getting tags from our subclasses. Since we don't want to break existing implementations that don't actually care about swapping out fragments, we won't make this method abstract. Instead it'll just <code>return null;</code> by default, and we treat that as the default case, reproducing existing behaviour.</p>
+
+<p>```</p>
+
+<pre><code>public String getTag(int position) {
+    return null;
+}
+</code></pre>
+
+<p>```</p>
+
+<p>Ok, so now we have a way of getting the tags, let's add an <code>ArrayList&lt;String&gt;</code> member variable to track our fragment tags:</p>
+
+<p>```</p>
+
+<pre><code>private ArrayList&lt;String&gt; mSavedFragmentTags = new ArrayList&lt;String&gt;();
+</code></pre>
+
+<p>```</p>
+
+<p>Now we go through and handle this in all 4 places where <code>mSavedState</code> is touched.</p>
+
+<p>In <code>instantiateItem</code> we must find the tag for the newly instantiated fragment first. Once we've got that, if we have saved state we can then compare this new tag with the saved tag. If they match, then we restore the state! If they don't, then we don't restore state. Easy.</p>
+
+<p>```</p>
+
+<pre><code>    Fragment fragment = getItem(position);
+    String fragmentTag = getTag(position);
+    if (DEBUG) Log.v(TAG, "Adding item #" + position + ": f=" + fragment + " t=" + fragmentTag);
+    if (mSavedState.size() &gt; position) {
+        String savedTag = mSavedFragmentTags.get(position);
+        if (TextUtils.equals(fragmentTag, savedTag)) {
+            Fragment.SavedState fss = mSavedState.get(position);
+            if (fss != null) {
+                fragment.setInitialSavedState(fss);
+            }
+        }
+    }
+</code></pre>
+
+<p>```</p>
+
+<p>Note that we also add the fragment using the <a href="https://developer.android.com/reference/android/support/v4/app/FragmentTransaction.html#add(int,"><code>FragmentTransaction#add (int containerViewId, Fragment fragment, String tag)</code></a> signature - that is, we actually use the tag when adding our fragment:</p>
+
+<p>```</p>
+
+<pre><code>    mCurTransaction.add(container.getId(), fragment, fragmentTag);
+
+    return fragment;
+}
+</code></pre>
+
+<p>```</p>
+
+<p>In <code>destroyItem</code> we just mirror what's done to <code>mSavedState</code>. We pad it out if necessary...</p>
+
+<p>```</p>
+
+<pre><code>    if (DEBUG) Log.v(TAG, "Removing item #" + position + ": f=" + object
+            + " v=" + ((Fragment)object).getView() + " t=" + fragment.getTag());
+    while (mSavedState.size() &lt;= position) {
+        mSavedState.add(null);
+        mSavedFragmentTags.add(null);
+    }
+</code></pre>
+
+<p>```</p>
+
+<p>...then we save the tag at that location.</p>
+
+<p>```</p>
+
+<pre><code>    mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+    mSavedFragmentTags.set(position, fragment.getTag());
+    mFragments.set(position, null);
+
+    mCurTransaction.remove(fragment);
+}
+</code></pre>
+
+<p>```</p>
+
+<p>Finally we have the <code>saveState</code> and <code>restoreState</code> methods. These are pretty trival changes. In <code>saveState</code> we put the saved fragment tags into the <code>Bundle</code>:</p>
+
+<p><code>
+state.putStringArrayList("tags", mSavedFragmentTags);
+</code></p>
+
+<p>And then in <code>restoreState</code>, surprise, we restore the saved fragment tags from the bundle:</p>
+
+<p><code>
+mSavedFragmentTags = bundle.getStringArrayList("tags");
+</code></p>
+
+<p>Two last things to do:</p>
+
+<ul>
+<li>Change your subclass to override your new, fixed, adapter (rather than the one in the support library)</li>
+<li>Remember to <strong>override <code>getTag(int position)</code></strong> to return a unique tag for each fragment</li>
+</ul>
+
+
+<p>If you forget either of these things, you'll just have the same behaviour as before. In my <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">demo app</a>, this would look something like the following - obviously you'll need to adjust this to suit your own data source:</p>
+
+<p>```
+@Override
+public String getTag(int position) {</p>
+
+<pre><code>return labels[position];
+</code></pre>
+
+<p>}
+```</p>
+
+<p>And that's it! Those're the changes we need to make to the <code>FragmentStatePagerAdapter</code> for it to stop misbehaving and restoring the wrong state to fragments in different locations.</p>
+
+<p>You can find a complete example of this fixed class <a href="https://github.com/adamsp/FragmentStatePagerIssueExample/blob/master/app/src/main/java/com/example/fragmentstatepagerissueexample/app/FixedFragmentStatePagerAdapter.java">in the sample project</a>. There's some lines commented out in the adapter in <code>MainActivity</code>; just swap the class definition and uncomment the method and you've magically got an adapter working as expected!</p>
+
+<h1>That's great! Any gotchas?</h1>
+
+<p>Sure are.</p>
+
+<ul>
+<li>Remember to override <code>getTag(int position)</code>, or else you'll continue to see the old behaviour.</li>
+<li><code>getTag(int position)</code> must return a <em>unique</em> tag for each fragment.</li>
+<li>If your <code>FragmentStatePagerAdapter</code> is an inner class of a <code>Fragment</code>, <em>and</em> you're calling that fragments <code>getTag()</code> method, then that call will now give a compile error. You'll need to change it to <code>MyParentFragment.this.getTag()</code> instead, <em>or</em> change the fixed adapter to use a different method signature - <code>getFragmentTag(int position)</code>, perhaps.</li>
+<li>You won't automatically receive bug fixes and updates to the <code>FragmentStatePagerAdapter</code> when the support library updates. This is unlikely to be an issue though - it's been in source for <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v4/java/android/support/v4/app/FragmentStatePagerAdapter.java">over 18 months as of this writing</a> (Feb 20, 2014) without a single change (the <a href="https://android.googlesource.com/platform/frameworks/support/+log/refs/heads/master/v13/java/android/support/v13/app/FragmentStatePagerAdapter.java">v13 version, too</a>).</li>
+<li>If you want to use a different key to put the saved tags into/restore from the bundle (other than just "tags" like I've used here), make sure it doesn't start with "f" - note how a little further down in the <code>restoreState</code> method it checks for keys starting with "f" and assumes they're fragments!</li>
+</ul>
+
+
+<h1>Thanks! You saved the day.</h1>
+
+<p>No worries! Maybe one day you'll write a post on how to fix some obscure bug that I'm having trouble with.</p>
+
+<p>If you have any questions, you can ask me on <a href="https://twitter.com/adamsnz">Twitter</a>, or <a href="https://plus.google.com/+AdamSpeakman">Google+</a>, or open an issue on (or send a pull request to) the <a href="https://github.com/adamsp/FragmentStatePagerIssueExample">Github project</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Broken JSONObject creation from a UTF-8 input String]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/"/>
+    <updated>2013-12-17T06:04:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string</id>
+    <content type="html"><![CDATA[<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
+
+<p>Faced this issue, again, at work today. We have a build system with build variants for different customers. To add a new customer, we just create a new folder, add the images and add a JSON config file to suit the new customers settings. We read from that file and into a JSON string (and then into a JSON object) something like this:</p>
+
+<p><code>
+InputStream inStream = context.getResources().openRawResource(R.raw.local_config);
+String json = IOUtils.toString(inStream);
+JSONObject jsonObject = new JSONObject(json);
+</code></p>
+
+<p>Sometimes, new customers speak a language other than English, and we have to save non-ASCII characters. In this case, the file gets saved as UTF-8. Testing this isn't a problem on my devices (Galaxy S2/Nexus 7) - but my tester has twice come back to me now and said that it doesn't work on our 2.3 device.</p>
+
+<!-- more -->
+
+
+<p>Figuring out the problem this time was pretty quick - I plugged her test phone in, saw this error popping up in Logcat and it triggered my memory about what was wrong. The problem is that the value hidden in that error message (encoded in this case as <code>0xEF 0xBB 0xBF</code>, often showing up as ï»¿ - see the <a href="http://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding">Wikipedia page</a>) is a Byte Order Mark. This is used to signal the <a href="http://en.wikipedia.org/wiki/Endianness">endianess</a> of the text stream. However, in UTF-8 it probably shouldn't even be there (but is still technically legitimate):</p>
+
+<p><blockquote><p>The Unicode Standard permits the BOM in UTF-8, but does not require nor recommend its use. Byte order has no meaning in UTF-8, so its only use in UTF-8 is to signal at the start that the text stream is encoded in UTF-8.</p><footer><strong>Wikipedia</strong> <cite><a href='http://en.wikipedia.org/wiki/Byte_order_mark#UTF-8'>en.wikipedia.org/wiki/&hellip;</a></cite></footer></blockquote></p>
+
+<p>Because of this, Java doesn't actually support automatically reading the BOM as an indicator of encoding - it adds it as part of the string, so you have to strip it out.  If you don't, automatic parsers such as the one built into JSONObject may freak out and give you a confusing error like the one above. Reading the message, it <em>appears</em> that it can't convert a String, which doesn't make sense, as the constructor takes a String. It's actually referring to the invisible (or in some cases barely visible) BOM character between the words "Value" and "of".</p>
+
+<p>So why is it working correctly on my devices? <a href="https://code.google.com/p/android/issues/detail?id=18508">This bug</a> logged in 2011 was 'fixed' by updating the built in JSON reader to handle UTF-8 strings with or without the Byte Order Mark. This change came in with Ice Cream Sandwich (Android 4.0) - hence why my tester is seeing the problem and I am not.</p>
+
+<p>The fix in our case has been to simply fix the file - the BOM shouldn't be there anyway, so we just remove it. You can do this in Notepad++ by opening the UTF-8 file, clicking the Encoding menu and selecting "Encode in UTF-8 without BOM". This may show up as "ANSI as UTF-8" in the encoding field at the bottom-right.</p>
+
+<p>The other, more general option (if you can't control the source of the JSON you're trying to parse) is to always 'clean' your incoming JSON string. This workaround was suggested in the original bug:</p>
+
+<p>```
+public Reader inputStreamToReader(InputStream in) throws IOException {</p>
+
+<pre><code>in.mark(3);
+int byte1 = in.read();
+int byte2 = in.read();
+if (byte1 == 0xFF &amp;&amp; byte2 == 0xFE) {
+  return new InputStreamReader(in, "UTF-16LE");
+} else if (byte1 == 0xFF &amp;&amp; byte2 == 0xFF) {
+  return new InputStreamReader(in, "UTF-16BE");
+} else {
+  int byte3 = in.read();
+  if (byte1 == 0xEF &amp;&amp; byte2 == 0xBB &amp;&amp; byte3 == 0xBF) {
+    return new InputStreamReader(in, "UTF-8");
+  } else {
+    in.reset();
+    return new InputStreamReader(in);
+  }
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>There are also <a href="http://stackoverflow.com/questions/1835430/byte-order-mark-screws-up-file-reading-in-java">many</a>, <a href="http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/input/BOMInputStream.html">many</a> other solutions available.</p>
+
+<p>Wonderful. Note that if you know your file is encoded a certain way, you should <em>always</em> pass the encoding to the reader - never depend on the default charset to be what you need. It's worth spending some time reading about <a href="http://en.wikipedia.org/wiki/Unicode">Unicode</a> and the various encodings you're likely to encounter - <a href="http://en.wikipedia.org/wiki/Windows-1252">Windows-1252 (or CP-1252)</a>, <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and <a href="http://en.wikipedia.org/wiki/UTF-16">UTF-16</a>, and how to interpret the bytes for these encodings. I find <a href="http://www.fileformat.info/info/unicode/char/FEFF/index.htm">fileformat.info</a> to be extremely useful, as well as the <a href="http://sourceforge.net/projects/npp-plugins/files/Hex%20Editor/">HexEditor Notepad++ plugin</a> for looking directly at the bytes (which is reportedly a bit unstable with the latest version of NP++, though I've never had any issues) - there will no doubt be something similar either built in to or available for your text editor of choice.</p>
+
+<p>Text encoding problems are painful to deal with - and if you're not sure what you should be using, <a href="http://www.utf8everywhere.org/">use UTF-8</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
+    <updated>2013-11-25T17:55:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
+    <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
+
+<!-- more -->
+
+
+<p></p>
+
+<h2>Getting the library</h2>
+
+<p>I’ll assume you have <a href="http://git-scm.com/">git</a> and <a href="http://ant.apache.org/">ant</a> installed.</p>
+
+<p>First, we have to get the library:</p>
+
+<p><code>
+git clone https://android.googlesource.com/platform/frameworks/volley
+</code></p>
+
+<p>Now we have the source code, we need to build it:</p>
+
+<p><code>
+cd volley
+ant jar
+</code></p>
+
+<p>Now, we have <code>volley.jar</code> in the <code>bin</code> directory. Copy this into <code>libs</code> in Eclipse (via drag &amp; drop through the GUI so it sets everything up properly) or set it up in your <code>build.gradle</code> if you’re using Studio. Wonderful.</p>
+
+<h2>Some basic setup</h2>
+
+<p>Volley works by sending requests to a <code>RequestQueue</code>. To create one of these requests, you override the <code>Request</code> object and implement a few methods:</p>
+
+<p>``` java
+queue.add(new Request<String>(Method.GET, url, errorListener) {</p>
+
+<pre><code>@Override
+protected Response&lt;String&gt; parseNetworkResponse(NetworkResponse response) {
+    // TODO Auto-generated method stub
+    return null;
+}
+
+@Override
+protected void deliverResponse(String response) {
+    // TODO Auto-generated method stub
+
+}});
+</code></pre>
+
+<p>```</p>
+
+<p>You can send these with a priority (by overriding <code>getPriority()</code>), so that higher priority requests get sent to the front of the queue, not the back. Useful if, for example, you’re loading some images in the background, but the user clicks on something that needs immediate download.</p>
+
+<p>Before we can use a queue, we have to set one up. This should done as a singleton. Since the easiest way of creating a <code>RequestQueue</code> requires a <code>Context</code>, you can either subclass <code>Application</code> (which the official docs advise against) or do it this way:</p>
+
+<p>``` java VolleyProvider.java
+public class VolleyProvider {</p>
+
+<pre><code>private static RequestQueue queue = null;
+
+private VolleyProvider() { }
+
+public static synchronized RequestQueue getQueue(Context ctx) {
+    if (queue == null) {
+        queue = Volley.newRequestQueue(ctx.getApplicationContext());
+    }
+    return queue;
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>And usage:</p>
+
+<p><code>java
+RequestQueue queue = VolleyProvider.getQueue(mContext);
+</code></p>
+
+<p>There are a few other ways of constructing a queue, allowing you to specify your own HTTP stack, cache, thread pool size, etc.</p>
+
+<h2>Now let’s GET some JSON</h2>
+
+<p>So now we've got our default queue set up, we can send a request. As you saw earlier, a request requires you to implement two methods - <code>parseNetworkResponse</code> and <code>deliverResponse</code>. The first of these methods parses your network response into some object that you're expecting, <strong>from a worker thread</strong>. The second delivers that response back to your UI thread, <strong>unless <code>parseNetworkResponse</code> returns <code>null</code></strong>.</p>
+
+<p>To fetch some simple JSON back from a given URL, there's a convenient utility class that comes packaged in <code>com.android.volley.toolbox</code> called <code>JsonRequest</code>.</p>
+
+<p>This class manages parsing any request body string into a byte array (the <code>getBody</code> method returns a <code>byte[]</code>), as well as specifying the content type headers, etc. You still have to implement the <code>parseNetworkResponse</code> abstract method from before, though you now supply a listener for the success case instead of an override. So now our request looks a bit like this (using <a href="https://code.google.com/p/google-gson/">Gson</a> for parsing the response, because it's awesome):</p>
+
+<p>``` java
+public class Person {</p>
+
+<pre><code>long id;
+String firstName;
+String lastName;
+String address;
+</code></pre>
+
+<p>}</p>
+
+<p>...</p>
+
+<p>String url = "http://person.com/person?id=1234";
+Request request = new JsonRequest<Person>(Method.GET, url, null, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>}) {</p>
+
+<pre><code>@Override
+protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
+    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
+    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
+    return result;
+}
+</code></pre>
+
+<p>};
+queue.add(request);
+```</p>
+
+<h2>And POST some back to the server</h2>
+
+<p>POSTing JSON back is equally as easy! Instead of passing in null for our body, we pass in a JSON String.</p>
+
+<p>``` java
+String url = "http://person.com/person/update?id=1234";
+String body = new GsonBuilder().create().toJson(somePerson);
+Request request = new JsonRequest<Person>(Method.POST, url, body, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>}) {</p>
+
+<pre><code>@Override
+protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
+    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
+    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
+    return result;
+}
+</code></pre>
+
+<p>};
+```</p>
+
+<h2>Is there an easier way?</h2>
+
+<p>Sort-of. I've abstracted the JSON parsing out so you only have to handle the success and the failure cases. If you've got more complex objects that need custom type adapters, you could put the Gson object creation and type adapter registration into another class somewhere and call it from here. Just drop this <code>GsonRequest</code> class in and you can use it by simply passing in the class of object you expect, as follows.</p>
+
+<p>``` java GsonRequest.java https://gist.github.com/adamsp/7637132
+/<em>*
+ * Copyright 2013 Adam Speakman
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ </em>/
+package your.package.here;</p>
+
+<p>import java.io.UnsupportedEncodingException;</p>
+
+<p>import com.android.volley.NetworkResponse;
+import com.android.volley.ParseError;
+import com.android.volley.Response;
+import com.android.volley.Response.ErrorListener;
+import com.android.volley.Response.Listener;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.JsonRequest;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;</p>
+
+<p>public class GsonRequest<T> extends JsonRequest<T> {</p>
+
+<pre><code>Class&lt;T&gt; mResponseClass;
+
+public GsonRequest(int method, String url, String requestBody, Class&lt;T&gt; responseClass, Listener&lt;T&gt; listener,
+        ErrorListener errorListener) {
+    super(method, url, requestBody, listener, errorListener);
+    mResponseClass = responseClass;
+    // Do some generic stuff in here - for example, set your retry policy to
+    // longer if you know all your requests are going to take &gt; 2.5 seconds
+    // etc etc...
+}
+
+@Override
+protected Response&lt;T&gt; parseNetworkResponse(NetworkResponse networkResponse) {
+    try {
+        String jsonString = new String(networkResponse.data, HttpHeaderParser.parseCharset(networkResponse.headers));
+        T response = new GsonBuilder().create().fromJson(jsonString, mResponseClass);
+        com.android.volley.Response&lt;T&gt; result = com.android.volley.Response.success(response,
+                HttpHeaderParser.parseCacheHeaders(networkResponse));
+        return result;
+    } catch (UnsupportedEncodingException e) {
+        return com.android.volley.Response.error(new ParseError(e));
+    } catch (JsonSyntaxException e) {
+        return com.android.volley.Response.error(new ParseError(e));
+    }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>```</p>
+
+<p>And usage:</p>
+
+<p>``` java
+Request request = new GsonRequest<T>(Method.POST, url, body, Person.class, new Listener<Person>() {</p>
+
+<pre><code>@Override
+public void onResponse(Person response) {
+    // Do something with our person object 
+}
+</code></pre>
+
+<p>}, new Response.ErrorListener() {</p>
+
+<pre><code>@Override
+public void onErrorResponse(VolleyError error) {
+    // Handle the error 
+    // error.networkResponse.statusCode
+    // error.networkResponse.data
+}
+</code></pre>
+
+<p>});
+```</p>
+
+<h2>What about that easy image loading?</h2>
+
+<p>Loading images with Volley is one of my favourite features of the library. Once it's setup, it's really easy to use. It handles loading images off the UI thread, can show a default image and an error one, and handles caching all for you. You need to set up an <code>ImageLoader</code>, similar to how you set up the <code>RequestQueue</code> as a singleton:</p>
+
+<p>``` java ImageLoaderProvider.java
+public class ImageLoaderProvider {</p>
+
+<pre><code>private static ImageLoader imageLoader = null;
+
+private ImageLoaderProvider() { }
+
+public static synchronized ImageLoader getImageLoader(Context ctx, RequestQueue queue) {
+    if (imageLoader == null) {
+        imageLoader = new ImageLoader(queue, new LruBitmapCache(getCacheSize(ctx)));
+    }
+    return imageLoader;
+}
+
+/**
+ * Returns a cache size equal to approximately three screens worth of images.
+ */
+private int getCacheSize(Context ctx) {
+    final DisplayMetrics displayMetrics = ctx.getResources().getDisplayMetrics();
+    final int screenWidth = displayMetrics.widthPixels;
+    final int screenHeight = displayMetrics.heightPixels;
+    final int screenBytes = screenWidth * screenHeight * 4; // 4 bytes per pixel
+
+    return screenBytes * 3;
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Now, replace your <code>ImageView</code> objects with <code>NetworkImageView</code> ones:</p>
+
+<p>``` xml</p>
+
+<pre><code>&lt;com.android.volley.toolbox.NetworkImageView
+    android:id="@+id/some_image"
+    ... /&gt;
+</code></pre>
+
+<p>```</p>
+
+<p>And finally, all you need to do is pass your <code>NetworkImageView</code> the URL of the image you'd like loaded, and the <code>ImageLoader</code>:</p>
+
+<p><code>java
+ImageLoader imageLoader = ImageLoaderProvider.getImageLoader(mContext, VolleyProvider.getQueue(mContext));
+((NetworkImageView)findViewById(R.id.some_image)).setImageUrl(imgUrl, imageLoader);
+</code></p>
+
+<p>There are also methods available such as <code>setDefaultImageResId</code> and <code>setErrorImageResId</code>, for supplying default and error resources.</p>
+
+<h2>Anything else?</h2>
+
+<p>Volley has a default TTL on requests of 2.5 seconds - after this, it'll retry the request. This can result in some unexpected behaviour - for example where your error listener gets called (immediately after the retry), then your success listener gets called a little while later (when the original request returns). You can fix this by specifying a timeout in your request:</p>
+
+<p><code>java
+public static final int REQUEST_TIMEOUT_MS = 10000;
+...
+request.setRetryPolicy(new DefaultRetryPolicy(REQUEST_TIMEOUT_MS, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+</code></p>
+
+<p>Another thing to be aware of is that the image loading will cache images in the full size they come down as. This means if you’re downloading images at full resolution but only displaying them at a much smaller one, you’re going to be caching them at full res. If this is in a list view, you’re going to be pushing stuff out of the cache (and then re-downloading them) a lot more often than desirable.</p>
+
+<p>You can get around this by changing some code in <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java"><code>NetworkImageView</code></a>. The important bit is near the end of the <code>loadImageIfNecessary(final boolean isInLayoutPass)</code> method. The code makes a call to the following method in the <code>ImageLoader</code> class:</p>
+
+<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
+public ImageContainer get(String requestUrl, final ImageListener listener) {</p>
+
+<pre><code>return get(requestUrl, listener, 0, 0);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Notice how that calls an overload that takes some <code>int</code> values?</p>
+
+<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
+public ImageContainer get(String requestUrl, ImageListener imageListener,</p>
+
+<pre><code>        int maxWidth, int maxHeight) {
+...
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Well, if we ‘fix’ the code back in <code>NetworkImageView</code> to pass in the width &amp; height of the view, then the image gets scaled down and cached at the smaller size (this takes is utilised in the <code>doParse</code> method of <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageRequest.java"><code>ImageRequest</code></a>:</p>
+
+<p>``` java NetworkImageLoader.java
+ImageContainer newContainer = mImageLoader.get(mUrl,</p>
+
+<pre><code>new ImageListener() {
+    ...
+},
+getMeasuredWidth(),
+getMeasuredHeight());
+</code></pre>
+
+<p>```</p>
+
+<p>Note that if you pass the image URL in for use in a different place, <strong>it’ll use the (scaled down) image from the cache</strong> - so if you need the full resolution image, this solution will need some modification.</p>
+
+<h2>Wow, Volley can do lots of stuff!</h2>
+
+<p>And I certainly haven't covered all of it here. There's loads more that it can do. I'd recommend looking through some of the classes in <code>com.android.volley.toolbox</code> to see what else is already written for you, and for some ideas of how to use some of the other cool features it has to offer.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Handling OutOfMemoryError with large bitmaps on older Android devices]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/"/>
+    <updated>2013-11-10T12:42:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices</id>
+    <content type="html"><![CDATA[<p>If you've ever worked with bitmaps on an Android device before, you've <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> 'bitmap size exceeds VM budget'. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
+
+<p><blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote></p>
+
+<p>Depending on what you're doing, there is a way to get around this.</p>
+
+<!-- more -->
+
+
+<p>The situation where I encountered this was at work when working on a control for displaying a seat map for a movie theatre as part of a ticket purchasing wizard. It shows the screen, the seats, some seat numbers, etc. From there the app user is able to pick seats to sit in for watching the movie. Previously this had been built by drawing many <code>Button</code> controls with a custom drawable. This was terribly inefficient, as all those controls had to be totally redrawn whenever the user tried to zoom, and was practically unusable for large theatres (with hundreds of seats) even on top end devices.</p>
+
+<p>Clearly this was due for a rewrite. The method I worked out for doing this was to create a 'base' bitmap from the theatre data showing all empty and already-sold seats. I'd use this as a static base image, and then paint 'selected' seats on top of that as the user taps to select/deselect seats they'd like to sit in.</p>
+
+<p>This method had a few benefits we didn't enjoy with the old method:</p>
+
+<ul>
+<li>we only had to create the whole theatre model (calculating seat positions etc) once, when creating the base image (previously it was re-calculating seat sizes and locations at every zoom level, ugh)</li>
+<li>since it was an image, we could now just drop it inside a <a href="https://github.com/MikeOrtiz/TouchImageView">TouchImageView</a> and that would handle zooming and panning (and <a href="https://github.com/MikeOrtiz/TouchImageView/pull/33">this pull request</a> maps touch inputs back to our original image co-ordinates after zoom)</li>
+<li>the static base image meant we only had to perform N+1 passes across the canvas when drawing seat selections, where N was the number of selected seats (typically low, so this is very fast)</li>
+</ul>
+
+
+<p>So off I went and coded this brilliant design. The code for the <code>SeatingImageView</code> control ended up looking <em>something</em> like this:</p>
+
+<p>``` java
+public class SeatingImageView extends TouchImageView {</p>
+
+<pre><code>private Bitmap mImmutableBase;
+
+public void setBaseImage(Bitmap baseImage) {
+    if (baseImage.isMutable())
+        baseImage = Bitmap.createBitmap(baseImage); // Immutable copy
+    mImmutableBase = baseImage;
+    setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.ARGB_8888, true));
+}
+
+public void drawSeats(List&lt;Drawable&gt; seats) {
+    if (mImmutableBase == null) return;
+
+    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
+    Canvas canvas = new Canvas(mutable);
+    for(Drawable seat : seats) {
+        seat.draw(canvas);
+    }
+
+    setImageBitmap(mutable);
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>So you'd set your base image, then overlay some selected seat images on top of that as necessary. I tested this on my phone (Galaxy SII i9100, Android 4.1) and my Nexus 7 (2012 model, Android 4.3) and sent it off to QA to be approved.</p>
+
+<p>But our tester sent it back. She said it was crashing whenever she selected a seat - but only on certain cinemas. This was odd, as I couldn't replicate it at all. I went and had a chat to her, and sure enough, it was definitely crashing on her device (an old HTC running Android 2.3). I borrowed the phone and went about figuring this out.</p>
+
+<p>Of course, it was the dreaded <code>OutOfMemoryError</code>. But how to fix this? I was already capping the size of the bitmap when building the base image and scaling seats down to fit. If I forced the max size to be lower, then large cinemas started to look awfully pixelated when zoomed in. I did some logging of the memory, and it appeared that the OOM was occurring at the time we created the new image with the seats - <code>Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);</code>.</p>
+
+<p>We had in memory at this point 3 copies of the bitmap:</p>
+
+<ol>
+<li>the immutable base image that wasn't being displayed (<code>mImmutableBase</code>)</li>
+<li>the <em>copy</em> of the immutable base we'd created that was currently being displayed to the user (<code>setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.RGB_8888, true));</code>)</li>
+<li>the copy we'd <em>just created</em> to draw the newly selected seats onto (<code>Bitmap mutable = immutablebase.copy(Bitmap.Config.RGB_8888, true);</code>)</li>
+</ol>
+
+
+<p>That seemed easy enough to handle - we'd just get rid of the one being displayed before we created a copy of the immutable base, then we'd only ever have 2 in memory at once. I updated my <code>drawSeats</code> method to look like this:</p>
+
+<p>``` java</p>
+
+<pre><code>public void drawSeats(List&lt;Drawable&gt; seats) {
+    if (mImmutableBase == null) return;
+
+    setImageBitmap(null); // Clear all references to the existing bitmap
+
+    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
+    Canvas canvas = new Canvas(mutable);
+    for(Drawable seat : seats) {
+        seat.draw(canvas);
+    }
+
+    setImageBitmap(mutable);
+}
+</code></pre>
+
+<p>```</p>
+
+<p>But this didn't work either!</p>
+
+<p>Reading through <a href="https://code.google.com/p/android/issues/detail?id=8488#c80">this thread</a> (post #80 down is especially useful) helps to shed some light on what's causing us to run out of memory here. The bitmap has memory in both the native and Dalvik heap, and it's not getting recycled from native quickly enough. Luckily, there is a way to force this to occur.</p>
+
+<p>The fix was to:</p>
+
+<ol>
+<li>acquire a reference to the bitmap that is currently being shown - <code>getDrawable()</code></li>
+<li>tell the <code>ImageView</code> to show nothing - <code>setImageBitmap(null)</code> - while still holding a reference to the old bitmap</li>
+<li>manually call <code>recycle()</code> on the old bitmap - this clears the native heap allocation</li>
+<li>although we <em>shouldn't have to</em> call <code>System.gc()</code>, I found that this was still required to consistently remove the bitmap from memory</li>
+</ol>
+
+
+<p>``` java
+public class SeatingImageView extends TouchImageView {</p>
+
+<pre><code>private Bitmap mImmutableBase;
+
+public void setBaseImage(Bitmap baseImage) {
+    if (baseImage.isMutable())
+        baseImage = Bitmap.createBitmap(baseImage); // Immutable copy
+    mImmutableBase = baseImage;
+    setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.ARGB_8888, true));
+}
+
+public void drawSeats(List&lt;Drawable&gt; seats) {
+    if (mImmutableBase == null) return;
+    recycleOldImage();
+
+    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
+    Canvas canvas = new Canvas(mutable);
+    for(Drawable seat : seats) {
+        seat.draw(canvas);
+    }
+
+    setImageBitmap(mutable);
+}
+
+private void recycleOldImage() {
+    Drawable oldImage = getDrawable();
+    if (oldImage != null) {
+        setImageBitmap(null);
+        BitmapDrawable oldBitmap = (BitmapDrawable)oldImage;
+        oldBitmap.getBitmap().recycle();
+        System.gc();
+    }
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>This fixed the bug! The memory logging I’d put in showed that were were only keeping at max two copies of the base image in memory at a time, and more importantly we weren’t seeing any crashes.</p>
+
+<p>However, the logs were also showing that we were still precariously close to the memory limit for the device. I was concerned about other devices with <a href="http://stackoverflow.com/questions/4351678/two-questions-about-max-heap-sizes-and-available-memory-in-android">even lower memory limits</a> - or other edge case theatre layouts we didn’t have examples for. This required something of a minor design change to resolve.</p>
+
+<p>I'd been depending on using ARGB_8888 config for the alpha channel, providing a transparent background behind the seat images to match the background for the rest of the screen. After some experimentation I discovered that there was no noticable change in the colour of my seat images when switching to RGB_565, but the memory usage dropped by a large amount - enough that I was happy I wasn't going to hit the cap again. It was simple enough to modify the control to take a 'background' colour at creation, which reproduced the effects of transparency. Of course if you're faced with the same situation but are using a background with a gradient, or a colour not accurately reproducable in RGB_565, this will not work for you as easily.</p>
+
+<p>Other tips:</p>
+
+<ul>
+<li>use RGB_565 if you can - it uses a lot less memory than ARGB_8888 (2 bytes per pixel instead of 4)</li>
+<li>if you're debugging memory issues with bitmaps, <strong>use an Android 3.0 or higher device</strong> to debug, since bitmap memory allocations are reflected correctly in the Dalvik heap on these devices (see the <a href="http://developer.android.com/training/articles/memory.html#Bitmaps">memory docs</a>)</li>
+<li>always test on the lowest spec device you have available to you, even if you're not doing all your development on that</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[20 Things, Week 5]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5/"/>
+    <updated>2013-10-28T20:07:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5</id>
+    <content type="html"><![CDATA[<p>This week I wrote <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Dream in Tweets</a>, which is an Android Daydream that shows the logged in users Twitter feed. A Daydream is effectively a screen saver that runs on Android 4.2 and up. But unlike a screensaver, it can do everything you can do in a regular Activity.</p>
+
+<p>I used a bit of what I had already written for Feather to create this, but I’ve spent most of today working on things like respecting the <a href="https://dev.twitter.com/terms/display-requirements">Twitter Display Requirements</a>. I’ll be able to reuse almost everything in Feather.</p>
+
+<!-- more -->
+
+
+<p></p>
+
+<p>Something I had to figure out how to do was modify the way links are displayed in a <code>TextView</code>. For tweet content, Twitter provides you with a way to display shortened links - “http://t.co/abcd” becomes “speakman.net.nz”. There are two ways to display links in an Android <code>TextView</code>. You can specify the <code>autoLink</code> <a href="http://developer.android.com/reference/android/widget/TextView.html#attr_android:autoLink">property</a> (which applies a regex to the text and automatically inserts links), or you can set the <a href="http://stackoverflow.com/questions/2734270/how-do-i-make-links-in-a-textview-clickable/2746708#2746708">movement method like so</a>, which handles HTML formatted links in the text.</p>
+
+<p>Now I had two use cases for clickable text. One of these was the username, the timestamp, etc - these I didn’t want to appear as links at all, they had to maintain their existing formatting (I could’ve just assigned a click handler to the view, but I feel this way is tidier than littering click handlers throughout <code>getView</code> in my adapter). The other use case was the links in tweet content, which I didn’t like the look of when they had the underline. I’ve <a href="https://gist.github.com/adamsp/7189653">written a class</a> to handle both these cases. It strips the <code>URLSpan</code> out and replaces it with an extension of that class, which modifies the way the link is displayed.</p>
+
+<p>The other thing I’ve written which I think might be of use is a way of handling these clicks within a DreamService. If you’ve got an Android Daydream that’s displaying links in a TextView, you just need to include <a href="https://gist.github.com/adamsp/7189623">this class</a> and then add your links as follows:</p>
+
+<p>``` java
+LinkMovementMethod lmm = new DreamLinkMovementMethod(mDream);
+TextView someTextView = (TextView)findViewById(R.id.tweet_author_image);
+someTextView.setMovementMethod(lmm);
+someTextView.setText(Html.fromHtml("This is a <a href=\"http://www.google.com\">Clickable Link</a>, "</p>
+
+<pre><code>    + " accessible from a &lt;a href=\"http://developer.android.com/reference/android/service/dreams/DreamService.html\"&gt;Dream Service&lt;/a&gt;."));
+</code></pre>
+
+<p>```</p>
+
+<p>The <code>DreamLinkMovementMethod</code> replicates the <code>onClick</code> behaviour of a <code>URLSpan</code>, except it  sets the <code>FLAG_ACTIVITY_NEW_TASK</code> flag on the <code>Intent</code> before it starts it.</p>
+]]></content>
+  </entry>
+  
+</feed>

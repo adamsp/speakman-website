@@ -1,0 +1,219 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Android Open Source licenses page - Adam Speakman</title>
+	<meta name="author" content="Adam">
+
+	
+	<meta name="description" content="Ever used an open source library in your Android app? If you have, then you probably should have included a page with the license details for that &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Adam Speakman" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">Adam Speakman</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+    <li><a href="/about">About</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
+		
+		
+		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
+		
+		
+		<a class="github" href="https://github.com/adamsp" title="GitHub">GitHub</a>
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:adamsp.github.com/speakman-website">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Android Open Source licenses page</h2>
+	<div class="entry-content"><p>Ever used an open source library in your Android app? If you have, then you <a href="http://www.tldrlegal.com/browse">probably</a> should have included a page with the license details for that library. If you did, great! You probably had the same question I did recently; how should you do that?</p>
+
+<!-- more -->
+
+
+<p>My first attempt looked like this - in fact, this is currently what my &#8217;<a href="https://github.com/adamsp/wookmark">Wookmark Viewer</a>&#8217; licenses page looks like:</p>
+
+<p><a href="/images/android-licenses-page/wookmark_licenses.png"><img src="/images/android-licenses-page/wookmark_licenses.png" width="240" height="400" title="Wookmark Licenses" ></a></p>
+
+<p>However, while this page details the libraries used and their licenses, and provides links to those things, it isn&#8217;t good enough. It says in the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License, Version 2.0</a>:</p>
+
+<blockquote><p>You must give any other recipients of the Work or Derivative Works a copy of this License.</p></blockquote>
+
+
+<p>So how should I do that? Do I have to include the same license multiple times for different libraries that use the same license? How do I include that in a regular old TextView?</p>
+
+<p>I revisited these issues at work recently when I was tasked with adding the licenses page to our app. After some time looking around online, I couldn&#8217;t really find any suggestions as to how this page should behave, how it should look, or how to display licenses for multiple libraries. The only thing I found was <a href="http://stackoverflow.com/questions/11300552/license-screen-about-phone-legal-information-open-licenses-screen">this Stack Overflow question</a>, but that was enough of a lead to set me on the right path. I checked out some of the other Google apps - see the Play Music and Gmail apps licenses pages below. This is simply an HTML page displayed in a DialogFragment. This is more like it!</p>
+
+<p><a href="/images/android-licenses-page/play_music_licenses.png"><img src="/images/android-licenses-page/play_music_licenses.png" width="240" height="400" title="Play Music Licenses" ></a><a href="/images/android-licenses-page/gmail_licenses.png"><img src="/images/android-licenses-page/gmail_licenses.png" width="240" height="400" title="Gmail Licenses" ></a></p>
+
+<p>This answers the questions of how to display things nicely (including the full license text), how to handle multiple libraries with the same license, how to display any copyright notice, and how to link to any modified source code, as required in the <a href="http://opensource.org/licenses/gpl-2.0.php">GPL-2.0</a> license, for example. It should also be simple enough to set up to automatically construct this page (or a similar one) in your build scripts - including any custom text you may want to add, as I&#8217;ve done above for my original attempt on the Wookmark app.</p>
+
+<p>I&#8217;ve created a DialogFragment that reproduces the Google apps licenses page experience - <a href="https://github.com/adamsp/AndroidLicensesPage">AndroidLicensesPage on Github</a>.</p>
+
+<p>If you want to use this fragment in your application, you need to include <code>LicensesFragment.java</code> in your projects source, as well as including the <code>licenses_fragment.xml</code> layout file in <code>/res/layout</code> and the <code>licenses.html</code> file in <code>/res/raw</code>. You should update the namespace to suit.</p>
+
+<p>To display licenses for your app, you need to update the <code>licenses.html</code> file to suit (including any libraries you&#8217;ve used, their licenses, copyrights, and any links to source you may have modified, if required), then you can display it as you would any other <a href="http://developer.android.com/reference/android/app/DialogFragment.html">DialogFragment</a>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>// Create & show a licenses fragment just as you would any other DialogFragment.
+</span><span class='line'>FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+</span><span class='line'>Fragment prev = getSupportFragmentManager().findFragmentByTag("licensesDialogFragment");
+</span><span class='line'>if (prev != null) {
+</span><span class='line'>  ft.remove(prev);
+</span><span class='line'>}
+</span><span class='line'>ft.addToBackStack(null);
+</span><span class='line'>
+</span><span class='line'>// Create and show the dialog.
+</span><span class='line'>DialogFragment newFragment = LicensesFragment.newInstance();
+</span><span class='line'>newFragment.show(ft, "licensesDialogFragment");</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There are some TODOs in the LicensesFragment file - you should modify these things to suit your environment, though things will work fine without you needing to touch anything.</p>
+
+<p>If you want to see an example of this in action, clone the repository and you should be able to open the included AndroidLicensesPageExampleProject in Android Studio. It should run directly on any device or emulator running Android 2.1 or higher.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-24T20:49:00-04:00" pubdate data-updated="true">Sep 24<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/open-source/'>open-source</a>
+
+
+</div>
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+		
+		
+		<a class="addthis_button_tweet"></a>
+		
+		
+		<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+		
+	</div>
+	
+	<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+	
+</div>
+
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Adam
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34453006-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
+
+
+
+</body>
+</html>
