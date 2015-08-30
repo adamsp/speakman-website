@@ -12,7 +12,7 @@ I recently encountered some problems where I was accidentallly duplicating build
 
 We use Twitter's [Fabric](http://fabric.io) platform to distribute our iOS app for internal testing. The "Beta" dashboard looks a little like this:
 
-{% img /images/ios-automation/fabric-beta-dashboard.PNG %}
+{% img /images/ios-automation/fabric-beta-dashboard.png %}
 
 If you aren't using this yet, I can't recommend it enough - I can distribute a beta build to a select set of testers immediately after archive. I don't have to deal with iTunes Connect, and as you can see, I get some great info on that distribution, such as who installed it, who's experienced a crash, and more.
 
