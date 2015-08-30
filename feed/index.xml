@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/feed" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2015-08-30T14:01:50-04:00</updated>
+  <updated>2015-08-30T14:04:43-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -25,7 +25,7 @@
 
 <p>We use Twitter&#8217;s <a href="http://fabric.io">Fabric</a> platform to distribute our iOS app for internal testing. The &#8220;Beta&#8221; dashboard looks a little like this:</p>
 
-<p><img src="http://adamsp.github.com/speakman-website/images/ios-automation/fabric-beta-dashboard.PNG"></p>
+<p><img src="http://adamsp.github.com/speakman-website/images/ios-automation/fabric-beta-dashboard.png"></p>
 
 <p>If you aren&#8217;t using this yet, I can&#8217;t recommend it enough - I can distribute a beta build to a select set of testers immediately after archive. I don&#8217;t have to deal with iTunes Connect, and as you can see, I get some great info on that distribution, such as who installed it, who&#8217;s experienced a crash, and more.</p>
 
