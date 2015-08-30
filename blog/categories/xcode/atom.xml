@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: xcode | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/xcode/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2015-08-30T14:01:50-04:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Automating iOS build numbers]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers/"/>
+    <updated>2015-08-30T13:21:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers</id>
+    <content type="html"><![CDATA[<p>I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At <a href="http://gobridgit.com">Bridgit</a> we're big fans of automation, so I went about finding a way to avoid this human error and let the machines do the work for me.</p>
+
+<!-- more -->
+
+
+<p>We use Twitter's <a href="http://fabric.io">Fabric</a> platform to distribute our iOS app for internal testing. The "Beta" dashboard looks a little like this:</p>
+
+<p><img src="/images/ios-automation/fabric-beta-dashboard.PNG"></p>
+
+<p>If you aren't using this yet, I can't recommend it enough - I can distribute a beta build to a select set of testers immediately after archive. I don't have to deal with iTunes Connect, and as you can see, I get some great info on that distribution, such as who installed it, who's experienced a crash, and more.</p>
+
+<p>As you can see, each build I send out has a build number attached to it - this is set by <code>CFBundleVersion</code> in your app's Info.plist file, or alternately by adjusting the value of the "Build" field in the "General" tab of your app target configuration.</p>
+
+<p>You might also have noticed that some of the builds in that screenshot have the same number. Whoops. Bit difficult to check if someone's on the latest version if the build number didn't change! At the time, my build process was "Remember to increment build number, commit changes, press Archive, distribute build". You can see how that might fall down - any process that includes "Remember to X" is going to fall over eventually.</p>
+
+<h1>Avoiding human error through automation</h1>
+
+<p>To avoid this kind of human error, we now have a handy script we've injected into our build process which automates the process of incrementing the build number.</p>
+
+<p>``` sh increment-build-number.sh https://gist.github.com/adamsp/da0e0bab0e25412779ff gist</p>
+
+<h1>!/bin/sh</h1>
+
+<p>if [ $CONFIGURATION == Release ]; then
+if [[ -n $(git status --porcelain) ]]; then
+echo "Repository is dirty, commit your changes.";
+exit 2
+fi
+echo "Incrementing build number..."
+plist=${PROJECT_DIR}/${INFOPLIST_FILE}</p>
+
+<h1>increment the build number (ie 115 to 116)</h1>
+
+<p>buildnum=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${plist}")
+if [[ "${buildnum}" == "" ]]; then
+echo "No build number in $plist"
+exit 2
+fi</p>
+
+<p>buildnum=$(expr $buildnum + 1)
+/usr/libexec/Plistbuddy -c "Set CFBundleVersion $buildnum" "${plist}"
+echo "Bumped build number to $buildnum"</p>
+
+<p>git add ${plist}
+git commit -m "Increment build number ($buildnum)"
+git tag build-$buildnum</p>
+
+<p>else
+echo $CONFIGURATION " build - Not bumping build number."
+fi
+```</p>
+
+<p>This script does the following:</p>
+
+<ul>
+<li>checks to see if the current build is a Release (archive) build
+
+<ul>
+<li>if NOT a Release build, do nothing (we don't want to increment the build number for every Test or Debug build)</li>
+</ul>
+</li>
+<li>checks to see if <code>git status --porcelain</code> prints anything
+
+<ul>
+<li>if something is printed, then the git repository is dirty and we shouldn't be doing a build, abort the build</li>
+</ul>
+</li>
+<li>checks for an existing build number
+
+<ul>
+<li>if no existing build number, abort the build</li>
+</ul>
+</li>
+<li>increments the build number</li>
+<li>commits the build number increment change to git</li>
+<li>tags the new commit with the build number so we can easily find it again later</li>
+</ul>
+
+
+<p>Much of this I pieced together from parts of <a href="http://stackoverflow.com/q/9258344/1217087">this StackOverflow question and its answers</a>.</p>
+
+<p>To use this, make sure it's executable (<code>chmod +x increment-build-number.sh</code>), then add a new "Run Script Phase" to the "Build Phases" tab of your target configuration and drop in the path. I left the script at the top level of my project directory so my path is <code>${PROJECT_DIR}/increment-build-number.sh</code>.</p>
+
+<p>To test that it's working, make a change, don't commit it, and attempt to build an archive - it should fail. Undo your changes, build an archive, and if it succeeds you should see a new tag listed when you run <code>git tag --list</code>.</p>
+
+<h1>Benefits</h1>
+
+<p>Now I can guarantee a new build number for every archive I distribute. Every time a tester reports a problem or I get a crash report, I can confirm which version they're running without wondering if it's <em>actually</em> the latest build or not. I no longer get submission rejections from the App Store because I forgot to increment the build.</p>
+
+<p>Importantly, I now have git tags for every build - so if a problem shows up, I can easily find the exact place in our git history where it was introduced.</p>
+
+<h1>Caveats</h1>
+
+<p>This script works well as a starter solution, but it has a few caveats. I'll address some of these in a future post - however if you're the only developer working on a simple application, this example is likely fine to use as-is.</p>
+
+<ul>
+<li>build numbers can be duplicated if multiple developers are doing releases</li>
+<li>build numbers can be duplicated if releases happen on multiple branches</li>
+<li>if the git tag already exists, by the time this fails the commit has already happened and the archive process completes (but applying the tag fails quietly)</li>
+<li>fails to consider different schemes and special behaviour you may want for those</li>
+<li>doesn't push the tag to remote</li>
+</ul>
+
+
+<p>These are all things we can fix (either through process or further automation) - I'll go over these fixes in a later post.</p>
+]]></content>
+  </entry>
+  
+</feed>

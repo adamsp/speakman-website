@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="Ever used a FragmentStatePagerAdapter? We&#8217;re using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress &hellip;">
+	<meta name="description" content="I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At Bridgit we&#8217;re big fans of &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -82,6 +82,48 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2015/08/30/automating-ios-build-numbers/">
+		
+			Automating iOS build numbers</a>
+	</h2>
+	<div class="entry-content">
+		<p>I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At <a href="http://gobridgit.com">Bridgit</a> we&#8217;re big fans of automation, so I went about finding a way to avoid this human error and let the machines do the work for me.</p>
+
+
+		
+		<a href="/blog/2015/08/30/automating-ios-build-numbers/" class="more-link">Read on &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-08-30T13:21:00-04:00" pubdate data-updated="true">Aug 30<span>th</span>, 2015</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/automation/'>automation</a>, <a class='category' href='/blog/categories/ios/'>ios</a>, <a class='category' href='/blog/categories/xcode/'>xcode</a>, <a class='category' href='/blog/categories/xcodebuild/'>xcodebuild</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -474,60 +516,6 @@
 
 
 	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/">
-		
-			Broken JSONObject creation from a UTF-8 input String</a>
-	</h2>
-	<div class="entry-content">
-		<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
-
-<p>Faced this issue, again, at work today. We have a build system with build variants for different customers. To add a new customer, we just create a new folder, add the images and add a JSON config file to suit the new customers settings. We read from that file and into a JSON string (and then into a JSON object) something like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>InputStream inStream = context.getResources().openRawResource(R.raw.local_config);
-</span><span class='line'>String json = IOUtils.toString(inStream);
-</span><span class='line'>JSONObject jsonObject = new JSONObject(json);</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Sometimes, new customers speak a language other than English, and we have to save non-ASCII characters. In this case, the file gets saved as UTF-8. Testing this isn&#8217;t a problem on my devices (Galaxy S2/Nexus 7) - but my tester has twice come back to me now and said that it doesn&#8217;t work on our 2.3 device.</p>
-
-
-		
-		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/" class="more-link">Read on &rarr;</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-12-17T06:04:00-05:00" pubdate data-updated="true">Dec 17<span>th</span>, 2013</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/java/'>java</a>, <a class='category' href='/blog/categories/text-encoding/'>text-encoding</a>
 
 
 </div>

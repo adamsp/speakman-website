@@ -157,12 +157,18 @@
         <lastmod>2015-01-20T09:54:55-05:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers/
+        </loc>
+        <lastmod>2015-08-30T13:58:58-04:00</lastmod>
+    </url>
+    <url>
         <loc>http://adamsp.github.com/speakman-website/about/</loc>
         <lastmod>2015-01-20T09:54:55-05:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/blog/archives/</loc>
-        <lastmod>2015-01-20T09:54:55-05:00</lastmod>
+        <lastmod>2015-08-30T13:58:58-04:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/feed/index.xml</loc>
@@ -170,6 +176,6 @@
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/</loc>
-        <lastmod>2015-01-20T09:54:55-05:00</lastmod>
+        <lastmod>2015-08-30T13:58:58-04:00</lastmod>
     </url>
 </urlset>

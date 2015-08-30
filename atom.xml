@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2015-01-20T10:29:12-05:00</updated>
+  <updated>2015-08-30T14:01:50-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,145 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Automating iOS build numbers]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers/"/>
+    <updated>2015-08-30T13:21:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers</id>
+    <content type="html"><![CDATA[<p>I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At <a href="http://gobridgit.com">Bridgit</a> we&#8217;re big fans of automation, so I went about finding a way to avoid this human error and let the machines do the work for me.</p>
+
+<!-- more -->
+
+
+<p>We use Twitter&#8217;s <a href="http://fabric.io">Fabric</a> platform to distribute our iOS app for internal testing. The &#8220;Beta&#8221; dashboard looks a little like this:</p>
+
+<p><img src="http://adamsp.github.com/speakman-website/images/ios-automation/fabric-beta-dashboard.PNG"></p>
+
+<p>If you aren&#8217;t using this yet, I can&#8217;t recommend it enough - I can distribute a beta build to a select set of testers immediately after archive. I don&#8217;t have to deal with iTunes Connect, and as you can see, I get some great info on that distribution, such as who installed it, who&#8217;s experienced a crash, and more.</p>
+
+<p>As you can see, each build I send out has a build number attached to it - this is set by <code>CFBundleVersion</code> in your app&#8217;s Info.plist file, or alternately by adjusting the value of the &#8220;Build&#8221; field in the &#8220;General&#8221; tab of your app target configuration.</p>
+
+<p>You might also have noticed that some of the builds in that screenshot have the same number. Whoops. Bit difficult to check if someone&#8217;s on the latest version if the build number didn&#8217;t change! At the time, my build process was &#8220;Remember to increment build number, commit changes, press Archive, distribute build&#8221;. You can see how that might fall down - any process that includes &#8220;Remember to X&#8221; is going to fall over eventually.</p>
+
+<h1>Avoiding human error through automation</h1>
+
+<p>To avoid this kind of human error, we now have a handy script we&#8217;ve injected into our build process which automates the process of incrementing the build number.</p>
+
+<figure class='code'><figcaption><span>increment-build-number.sh </span><a href='https://gist.github.com/adamsp/da0e0bab0e25412779ff'>gist</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> <span class="nv">$CONFIGURATION</span> <span class="o">==</span> Release <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> -n <span class="k">$(</span>git status --porcelain<span class="k">)</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'><span class="nb">echo</span> <span class="s2">&quot;Repository is dirty, commit your changes.&quot;</span><span class="p">;</span>
+</span><span class='line'><span class="nb">exit </span>2
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="nb">echo</span> <span class="s2">&quot;Incrementing build number...&quot;</span>
+</span><span class='line'><span class="nv">plist</span><span class="o">=</span><span class="k">${</span><span class="nv">PROJECT_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">INFOPLIST_FILE</span><span class="k">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c"># increment the build number (ie 115 to 116)</span>
+</span><span class='line'><span class="nv">buildnum</span><span class="o">=</span><span class="k">$(</span>/usr/libexec/PlistBuddy -c <span class="s2">&quot;Print CFBundleVersion&quot;</span> <span class="s2">&quot;${plist}&quot;</span><span class="k">)</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${buildnum}&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'><span class="nb">echo</span> <span class="s2">&quot;No build number in $plist&quot;</span>
+</span><span class='line'><span class="nb">exit </span>2
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="nv">buildnum</span><span class="o">=</span><span class="k">$(</span>expr <span class="nv">$buildnum</span> + 1<span class="k">)</span>
+</span><span class='line'>/usr/libexec/Plistbuddy -c <span class="s2">&quot;Set CFBundleVersion $buildnum&quot;</span> <span class="s2">&quot;${plist}&quot;</span>
+</span><span class='line'><span class="nb">echo</span> <span class="s2">&quot;Bumped build number to $buildnum&quot;</span>
+</span><span class='line'>
+</span><span class='line'>git add <span class="k">${</span><span class="nv">plist</span><span class="k">}</span>
+</span><span class='line'>git commit -m <span class="s2">&quot;Increment build number ($buildnum)&quot;</span>
+</span><span class='line'>git tag build-<span class="nv">$buildnum</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">else</span>
+</span><span class='line'><span class="nb">echo</span> <span class="nv">$CONFIGURATION</span> <span class="s2">&quot; build - Not bumping build number.&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This script does the following:</p>
+
+<ul>
+<li>checks to see if the current build is a Release (archive) build
+
+<ul>
+<li>if NOT a Release build, do nothing (we don&#8217;t want to increment the build number for every Test or Debug build)</li>
+</ul>
+</li>
+<li>checks to see if <code>git status --porcelain</code> prints anything
+
+<ul>
+<li>if something is printed, then the git repository is dirty and we shouldn&#8217;t be doing a build, abort the build</li>
+</ul>
+</li>
+<li>checks for an existing build number
+
+<ul>
+<li>if no existing build number, abort the build</li>
+</ul>
+</li>
+<li>increments the build number</li>
+<li>commits the build number increment change to git</li>
+<li>tags the new commit with the build number so we can easily find it again later</li>
+</ul>
+
+
+<p>Much of this I pieced together from parts of <a href="http://stackoverflow.com/q/9258344/1217087">this StackOverflow question and its answers</a>.</p>
+
+<p>To use this, make sure it&#8217;s executable (<code>chmod +x increment-build-number.sh</code>), then add a new &#8220;Run Script Phase&#8221; to the &#8220;Build Phases&#8221; tab of your target configuration and drop in the path. I left the script at the top level of my project directory so my path is <code>${PROJECT_DIR}/increment-build-number.sh</code>.</p>
+
+<p>To test that it&#8217;s working, make a change, don&#8217;t commit it, and attempt to build an archive - it should fail. Undo your changes, build an archive, and if it succeeds you should see a new tag listed when you run <code>git tag --list</code>.</p>
+
+<h1>Benefits</h1>
+
+<p>Now I can guarantee a new build number for every archive I distribute. Every time a tester reports a problem or I get a crash report, I can confirm which version they&#8217;re running without wondering if it&#8217;s <em>actually</em> the latest build or not. I no longer get submission rejections from the App Store because I forgot to increment the build.</p>
+
+<p>Importantly, I now have git tags for every build - so if a problem shows up, I can easily find the exact place in our git history where it was introduced.</p>
+
+<h1>Caveats</h1>
+
+<p>This script works well as a starter solution, but it has a few caveats. I&#8217;ll address some of these in a future post - however if you&#8217;re the only developer working on a simple application, this example is likely fine to use as-is.</p>
+
+<ul>
+<li>build numbers can be duplicated if multiple developers are doing releases</li>
+<li>build numbers can be duplicated if releases happen on multiple branches</li>
+<li>if the git tag already exists, by the time this fails the commit has already happened and the archive process completes (but applying the tag fails quietly)</li>
+<li>fails to consider different schemes and special behaviour you may want for those</li>
+<li>doesn&#8217;t push the tag to remote</li>
+</ul>
+
+
+<p>These are all things we can fix (either through process or further automation) - I&#8217;ll go over these fixes in a later post.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration]]></title>
@@ -1491,19 +1630,6 @@
 
 
 <p>The <code>DreamLinkMovementMethod</code> replicates the <code>onClick</code> behaviour of a <code>URLSpan</code>, except it  sets the <code>FLAG_ACTIVITY_NEW_TASK</code> flag on the <code>Intent</code> before it starts it.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 4]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/21/20-things-week-4/"/>
-    <updated>2013-10-21T21:34:00-04:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/10/21/20-things-week-4</id>
-    <content type="html"><![CDATA[<p>This week I&#8217;ve done a fair bit of work. I just finished a blog post on <a href="http://adamsp.github.com/speakman-website/blog/2013/10/21/android-currency-localisation-hell/">Currency localisation</a> which I&#8217;ve had on the back burner for some time - now I remember why, even writing that post gave me a headache. Currency formatting is a giant mess, as the formatting tables for most locales are pretty incomplete.</p>
-
-<p>I&#8217;ve also made some significant progress on Feather (my Twitter app). It now loads a timeline feed and a mentions feed, and saves &amp; loads those to a local database so that they&#8217;re pre-populated with the most recent data received when you first load the app. It can also post a new tweet (just a very basic <code>EditText</code> in a dialog at the moment), as well as Favourite/Unfavourite and Retweet tweets.</p>
-
-<p>The next step with Feather is to build a proper New Tweet dialog fragment, so it can handle Replys/New Tweets/quotes/share intents. Onwards!</p>
 ]]></content>
   </entry>
   
