@@ -89,4 +89,8 @@ This script works well as a starter solution, but it has a few caveats. I'll add
 - fails to consider different schemes and special behaviour you may want for those
 - doesn't push the tag to remote
 
-These are all things we can fix (either through process or further automation) - I'll go over these fixes in a later post.
+These are all things we can fix (either through process or further automation) - ~~I'll go over these fixes in a later post~~.
+
+**Edit Feb 22nd 2016:** Well, I never got around to fixing the above caveats. I'm no longer with Bridgit, and never had the chance to fix the above (with the exception of the schemes issue). My entire time with Bridgit I was either the sole iOS developer, or at least the only person doing releases - so I didn't have to worry about conflicts. My recommendation is to simply use the current epoch for build numbers (which you can acquire through `date +"%s"`), and to have a dedicated build/release machine. 
+
+For dealing with schemes, if I recall correctly I had 4 schemes - Debug, Development, Staging, Release. Each of these had a regular build configuration, and an archive configuration. I'd only increment build numbers if the build configuration name included "Archive", otherwise I'd bail out (avoiding incrementing the build number every time you ran the app on the simulator!). We also used these configurations to enable analytics only on archive.
