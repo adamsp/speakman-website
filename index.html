@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At Bridgit we&#8217;re big fans of &hellip;">
+	<meta name="description" content="Back in November, I had just started using Realm on Android and was having some troubles. I&#8217;d occasionally need to make a model change, and &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -82,6 +82,56 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/">
+		
+			Handling RealmMigrationNeededException on a fresh installation on Android</a>
+	</h2>
+	<div class="entry-content">
+		<p>Back in November, I had just started using <a href="https://realm.io/">Realm</a> on Android and was having some troubles. I&#8217;d occasionally need to make a model change, and being early on in development I was happy to just delete the Realm and start again - in production you&#8217;d want to perform a migration so you don&#8217;t lose any user data.</p>
+
+<p>However, the &#8220;delete and re-install&#8221; approach wasn&#8217;t working as expected - I kept getting a <code>RealmMigrationNeededException</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>io.realm.exceptions.RealmMigrationNeededException: RealmMigration must be provided</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This doesn&#8217;t make sense! I should be able to uninstall an app and upon reinstalling it I should have a fresh slate to work with. As it turns out, not quite. I couldn&#8217;t figure out why at the time, but <a href="https://github.com/realm/realm-java/issues/1856">the workaround</a> was to simply add a <code>deleteRealmMigrationIfNeeded()</code> call to my Realm configuration when building it. I made a note to deal with this before release, and carried on my way.</p>
+
+
+		
+		<a href="/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/" class="more-link">Read on &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2016-04-21T18:33:00-04:00" pubdate data-updated="true">Apr 21<span>st</span>, 2016</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/backup/'>backup</a>, <a class='category' href='/blog/categories/realm/'>realm</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -469,49 +519,6 @@
 
 
 <time datetime="2014-01-01T11:49:00-05:00" pubdate data-updated="true">Jan 1<span>st</span>, 2014</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/12/17/20-things-week-12/">
-		
-			20 Things Week 12</a>
-	</h2>
-	<div class="entry-content">
-		<p>Actually managed to get some code written this week, though it&#8217;s still pretty rough - I&#8217;ve got a basic widget working for What&#8217;s Shaking, NZ? for Android. Exciting stuff; that&#8217;ll be polished up and good to go next week. It was actually really easy to do, as I can update it directly from my existing background service (which polls the NZ Geonet API).</p>
-
-<p>Also wrote a <a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string">blog post on a common Java encoding issue</a> - basically, when you&#8217;ve got a UTF-8 file with a Byte Order Mark at the start, things that parse that can freak out if they&#8217;re not expecting it. Easiest way to avoid it is to get rid of the BOM altogether.</p>
-
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-12-17T06:11:00-05:00" pubdate data-updated="true">Dec 17<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 

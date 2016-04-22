@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: backup | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/backup/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2016-04-21T22:01:37-04:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/"/>
+    <updated>2016-04-21T18:33:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android</id>
+    <content type="html"><![CDATA[<p>Back in November, I had just started using <a href="https://realm.io/">Realm</a> on Android and was having some troubles. I'd occasionally need to make a model change, and being early on in development I was happy to just delete the Realm and start again - in production you'd want to perform a migration so you don't lose any user data.</p>
+
+<p>However, the "delete and re-install" approach wasn't working as expected - I kept getting a <code>RealmMigrationNeededException</code>:</p>
+
+<p><code>
+io.realm.exceptions.RealmMigrationNeededException: RealmMigration must be provided
+</code></p>
+
+<p>This doesn't make sense! I should be able to uninstall an app and upon reinstalling it I should have a fresh slate to work with. As it turns out, not quite. I couldn't figure out why at the time, but <a href="https://github.com/realm/realm-java/issues/1856">the workaround</a> was to simply add a <code>deleteRealmMigrationIfNeeded()</code> call to my Realm configuration when building it. I made a note to deal with this before release, and carried on my way.</p>
+
+<!-- more -->
+
+
+<p>This morning I was getting ready to publish and Lint warned me that I didn't handle <a href="http://developer.android.com/intl/es/training/backup/autosyncapi.html">Android 6.0 Marshmallow automatic backup</a>. After some investigation, I realised that this was backing up and restoring my Realm files! The order of operations which caused the above issue was:</p>
+
+<ol>
+<li>app backup occurs</li>
+<li>uninstall app</li>
+<li>install app (ie launching from Android Studio)</li>
+<li>restore backup (note before the app launches!)</li>
+<li>continue launching app</li>
+</ol>
+
+
+<p>It seemed simple enough to handle - I'd just exclude the <code>default.realm</code> and <code>default.realm.lock</code> files from backup and it'd work. Unfortunately this still backs up the Realm log files, all preference files (plenty of third party libraries make use of shared prefs) and even files related to instant-run! This makes a "clean install" not quite what you'd expect - not clean at all.</p>
+
+<p>My recommendation is to explicitly <em>include</em> only the things you want. For example, I only care about my users settings - I can re-retrieve everything else remotely - so my <code>xml/backup.xml</code> looks like this:</p>
+
+<p>``` xml
+&lt;?xml version="1.0" encoding="utf-8"?>
+<full-backup-content></p>
+
+<pre><code>&lt;include domain="sharedpref" path="speakman.whatsshakingnz_preferences.xml"/&gt;
+</code></pre>
+
+<p></full-backup-content>
+```</p>
+
+<p>You also need to reference this file in your manifest:</p>
+
+<p>``` xml
+<manifest ... ></p>
+
+<pre><code>&lt;application ...
+    android:fullBackupContent="@xml/backup"&gt;
+    ...
+</code></pre>
+
+<p></manifest>
+```</p>
+
+<p>Note that you <a href="http://stackoverflow.com/q/36773020/1217087">must specify the <code>.xml</code> extension</a> when backing up shared preferences files - this is an implementation detail we unfortunately have to worry about, which is a bit strange, especially as we both specify a domain for the file and do <em>not</em> specify the file extension in code.</p>
+
+<p>If you're having trouble with this, I'd also recommend <a href="http://stackoverflow.com/q/33743941/1217087">reading through this StackOverflow question &amp; answer</a>, as following through this helped a lot with figuring out what was going on.</p>
+
+<p>Finally, the last useful bit of info I have is how to <em>wipe</em> a backup. You <em>must have the app installed</em>, and then you can wipe the existing server-side backup with:</p>
+
+<p><code>
+adb shell bmgr wipe com.google.android.gms/.backup.BackupTransportService com.yourpackage
+</code></p>
+
+<p>Note that the <code>BackupTransportService</code> part refers to the default transport for backup - you should check what yours is by running <code>adb shell bmgr list transports</code> - the default will be marked with a <code>*</code>.</p>
+]]></content>
+  </entry>
+  
+</feed>

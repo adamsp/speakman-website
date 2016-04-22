@@ -163,12 +163,18 @@
         <lastmod>2016-02-22T14:00:23-05:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/
+        </loc>
+        <lastmod>2016-04-21T21:59:55-04:00</lastmod>
+    </url>
+    <url>
         <loc>http://adamsp.github.com/speakman-website/about/</loc>
         <lastmod>2016-02-22T14:10:22-05:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/blog/archives/</loc>
-        <lastmod>2016-02-22T14:00:23-05:00</lastmod>
+        <lastmod>2016-04-21T21:59:55-04:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/feed/index.xml</loc>
@@ -176,6 +182,6 @@
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/</loc>
-        <lastmod>2016-02-22T14:00:23-05:00</lastmod>
+        <lastmod>2016-04-21T21:59:55-04:00</lastmod>
     </url>
 </urlset>

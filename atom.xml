@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2016-02-22T14:11:19-05:00</updated>
+  <updated>2016-04-21T22:01:37-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,80 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/"/>
+    <updated>2016-04-21T18:33:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android</id>
+    <content type="html"><![CDATA[<p>Back in November, I had just started using <a href="https://realm.io/">Realm</a> on Android and was having some troubles. I&#8217;d occasionally need to make a model change, and being early on in development I was happy to just delete the Realm and start again - in production you&#8217;d want to perform a migration so you don&#8217;t lose any user data.</p>
+
+<p>However, the &#8220;delete and re-install&#8221; approach wasn&#8217;t working as expected - I kept getting a <code>RealmMigrationNeededException</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>io.realm.exceptions.RealmMigrationNeededException: RealmMigration must be provided</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This doesn&#8217;t make sense! I should be able to uninstall an app and upon reinstalling it I should have a fresh slate to work with. As it turns out, not quite. I couldn&#8217;t figure out why at the time, but <a href="https://github.com/realm/realm-java/issues/1856">the workaround</a> was to simply add a <code>deleteRealmMigrationIfNeeded()</code> call to my Realm configuration when building it. I made a note to deal with this before release, and carried on my way.</p>
+
+<!-- more -->
+
+
+<p>This morning I was getting ready to publish and Lint warned me that I didn&#8217;t handle <a href="http://developer.android.com/intl/es/training/backup/autosyncapi.html">Android 6.0 Marshmallow automatic backup</a>. After some investigation, I realised that this was backing up and restoring my Realm files! The order of operations which caused the above issue was:</p>
+
+<ol>
+<li>app backup occurs</li>
+<li>uninstall app</li>
+<li>install app (ie launching from Android Studio)</li>
+<li>restore backup (note before the app launches!)</li>
+<li>continue launching app</li>
+</ol>
+
+
+<p>It seemed simple enough to handle - I&#8217;d just exclude the <code>default.realm</code> and <code>default.realm.lock</code> files from backup and it&#8217;d work. Unfortunately this still backs up the Realm log files, all preference files (plenty of third party libraries make use of shared prefs) and even files related to instant-run! This makes a &#8220;clean install&#8221; not quite what you&#8217;d expect - not clean at all.</p>
+
+<p>My recommendation is to explicitly <em>include</em> only the things you want. For example, I only care about my users settings - I can re-retrieve everything else remotely - so my <code>xml/backup.xml</code> looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;</span>
+</span><span class='line'><span class="nt">&lt;full-backup-content&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;include</span> <span class="na">domain=</span><span class="s">&quot;sharedpref&quot;</span> <span class="na">path=</span><span class="s">&quot;speakman.whatsshakingnz_preferences.xml&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'><span class="nt">&lt;/full-backup-content&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You also need to reference this file in your manifest:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;manifest</span> <span class="err">...</span> <span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;application</span> <span class="err">...</span>
+</span><span class='line'>        <span class="na">android:fullBackupContent=</span><span class="s">&quot;@xml/backup&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        ...
+</span><span class='line'><span class="nt">&lt;/manifest&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that you <a href="http://stackoverflow.com/q/36773020/1217087">must specify the <code>.xml</code> extension</a> when backing up shared preferences files - this is an implementation detail we unfortunately have to worry about, which is a bit strange, especially as we both specify a domain for the file and do <em>not</em> specify the file extension in code.</p>
+
+<p>If you&#8217;re having trouble with this, I&#8217;d also recommend <a href="http://stackoverflow.com/q/33743941/1217087">reading through this StackOverflow question &amp; answer</a>, as following through this helped a lot with figuring out what was going on.</p>
+
+<p>Finally, the last useful bit of info I have is how to <em>wipe</em> a backup. You <em>must have the app installed</em>, and then you can wipe the existing server-side backup with:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>adb shell bmgr wipe com.google.android.gms/.backup.BackupTransportService com.yourpackage
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that the <code>BackupTransportService</code> part refers to the default transport for backup - you should check what yours is by running <code>adb shell bmgr list transports</code> - the default will be marked with a <code>*</code>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Automating iOS build numbers]]></title>
@@ -1597,43 +1671,6 @@
 <p>So after all that, and the fact that I didn’t actually finish the Week 5 code until Wednesday, I had a fairly short Week 6 - especially as Battlefield 4 came out on Friday. I spent most of my spare time over the weekend playing that, knowing I had to come up with something before Monday night.</p>
 
 <p>What I’ve done this week is a very small thing: I’ve installed a new Octopress theme for my site - <a href="https://github.com/tommy351/Octopress-Theme-Slash">Slash</a>. I like this theme a lot better than the default - the social media icons at the top, the font size and style, the layout. I’ve also now got working ‘share’ buttons at the bottom of each post, which is a nice change. In my <a href="http://adamsp.github.com/speakman-website/blog/2013/09/23/20-things-in-20-weeks/">original list of 20+ Things</a>, I suggested &#8220;Fixing the Twitter stream&#8221; down the side - instead, I’ve gotten rid of it, and gone for this new style.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 5]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5/"/>
-    <updated>2013-10-28T20:07:00-04:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5</id>
-    <content type="html"><![CDATA[<p>This week I wrote <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Dream in Tweets</a>, which is an Android Daydream that shows the logged in users Twitter feed. A Daydream is effectively a screen saver that runs on Android 4.2 and up. But unlike a screensaver, it can do everything you can do in a regular Activity.</p>
-
-<p>I used a bit of what I had already written for Feather to create this, but I’ve spent most of today working on things like respecting the <a href="https://dev.twitter.com/terms/display-requirements">Twitter Display Requirements</a>. I’ll be able to reuse almost everything in Feather.</p>
-
-<!-- more -->
-
-
-<p></p>
-
-<p>Something I had to figure out how to do was modify the way links are displayed in a <code>TextView</code>. For tweet content, Twitter provides you with a way to display shortened links - “http://t.co/abcd” becomes “speakman.net.nz”. There are two ways to display links in an Android <code>TextView</code>. You can specify the <code>autoLink</code> <a href="http://developer.android.com/reference/android/widget/TextView.html#attr_android:autoLink">property</a> (which applies a regex to the text and automatically inserts links), or you can set the <a href="http://stackoverflow.com/questions/2734270/how-do-i-make-links-in-a-textview-clickable/2746708#2746708">movement method like so</a>, which handles HTML formatted links in the text.</p>
-
-<p>Now I had two use cases for clickable text. One of these was the username, the timestamp, etc - these I didn’t want to appear as links at all, they had to maintain their existing formatting (I could’ve just assigned a click handler to the view, but I feel this way is tidier than littering click handlers throughout <code>getView</code> in my adapter). The other use case was the links in tweet content, which I didn’t like the look of when they had the underline. I’ve <a href="https://gist.github.com/adamsp/7189653">written a class</a> to handle both these cases. It strips the <code>URLSpan</code> out and replaces it with an extension of that class, which modifies the way the link is displayed.</p>
-
-<p>The other thing I’ve written which I think might be of use is a way of handling these clicks within a DreamService. If you’ve got an Android Daydream that’s displaying links in a TextView, you just need to include <a href="https://gist.github.com/adamsp/7189623">this class</a> and then add your links as follows:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">LinkMovementMethod</span> <span class="n">lmm</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DreamLinkMovementMethod</span><span class="o">(</span><span class="n">mDream</span><span class="o">);</span>
-</span><span class='line'><span class="n">TextView</span> <span class="n">someTextView</span> <span class="o">=</span> <span class="o">(</span><span class="n">TextView</span><span class="o">)</span><span class="n">findViewById</span><span class="o">(</span><span class="n">R</span><span class="o">.</span><span class="na">id</span><span class="o">.</span><span class="na">tweet_author_image</span><span class="o">);</span>
-</span><span class='line'><span class="n">someTextView</span><span class="o">.</span><span class="na">setMovementMethod</span><span class="o">(</span><span class="n">lmm</span><span class="o">);</span>
-</span><span class='line'><span class="n">someTextView</span><span class="o">.</span><span class="na">setText</span><span class="o">(</span><span class="n">Html</span><span class="o">.</span><span class="na">fromHtml</span><span class="o">(</span><span class="s">&quot;This is a &lt;a href=\&quot;http://www.google.com\&quot;&gt;Clickable Link&lt;/a&gt;, &quot;</span>
-</span><span class='line'>        <span class="o">+</span> <span class="s">&quot; accessible from a &lt;a href=\&quot;http://developer.android.com/reference/android/service/dreams/DreamService.html\&quot;&gt;Dream Service&lt;/a&gt;.&quot;</span><span class="o">));</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>DreamLinkMovementMethod</code> replicates the <code>onClick</code> behaviour of a <code>URLSpan</code>, except it  sets the <code>FLAG_ACTIVITY_NEW_TASK</code> flag on the <code>Intent</code> before it starts it.</p>
 ]]></content>
   </entry>
   
