@@ -4,7 +4,7 @@
   <title><![CDATA[Category: android | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2016-04-21T22:01:37-04:00</updated>
+  <updated>2016-04-26T15:10:21-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,159 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/"/>
+    <updated>2016-04-26T14:55:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android</id>
+    <content type="html"><![CDATA[<p>In the process of rebuilding <a href="https://github.com/adamsp/wsnz-android">What's Shaking, NZ?</a>, I needed to implement a periodic network request (literally polling an API). I wanted to use the new <a href="https://developer.android.com/reference/android/app/job/JobScheduler.html">Job Scheduler</a> API, but unfortunately, this is only available on API 21 and above. Luckily we can get similar functionality by using <a href="https://developers.google.com/cloud-messaging/network-manager">GCM Network Manager</a>, as <a href="http://stackoverflow.com/q/25203254/1217087">suggested on StackOverflow</a>. Note that the GCM Network Manager actually uses Job Scheduler behind the scenes in API 21+.</p>
+
+<p>The <a href="https://developers.google.com/cloud-messaging/network-manager">documentation</a> for this is somewhat hand-wavy. Here I attempt to provide a true step-by-step guide to implementing this. I assume you're <em>not</em> already using GCM for something else in your app (as that was the case for me).</p>
+
+<!-- more -->
+
+
+<h1>Implement GcmTaskService</h1>
+
+<p>The first step is to import GCM in your <code>build.gradle</code>:</p>
+
+<p><code>
+compile 'com.google.android.gms:play-services-gcm:8.4.0'
+</code></p>
+
+<p>Now you can implement <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/GcmTaskService"><code>GcmTaskService</code></a>. This is as simple as the following:</p>
+
+<p>```
+import com.google.android.gms.gcm.GcmNetworkManager;
+import com.google.android.gms.gcm.GcmTaskService;
+import com.google.android.gms.gcm.TaskParams;</p>
+
+<p>public class SyncService extends GcmTaskService {</p>
+
+<pre><code>@Override
+public int onRunTask(TaskParams taskParams) {
+    // Perform your network request. Note you're already off the main thread here.
+    return GcmNetworkManager.RESULT_SUCCESS;
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Great. So you get a callback, on a different thread, where you can do your stuff.</p>
+
+<h1>Add the service to the manifest</h1>
+
+<p>The instructions say to add the service to the manifest and "Add all applicable intent filters. See details for intent filter support in the GcmTaskService API reference."</p>
+
+<p>Note that the <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/GcmTaskService#constants">GcmTaskService documentation</a> has <code>SERVICE_ACTION_EXECUTE_TASK</code> as the name for the <code>com.google.android.gms.gcm.ACTION_TASK_READY</code> intent filter. This is right now the only thing we need to care about.</p>
+
+<p>We also need to add the <code>RECEIVE_BOOT_COMPLETED</code> permission so that our periodic sync will persist across reboots.</p>
+
+<p>``` xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /></p>
+
+<p><application ... ></p>
+
+<pre><code>&lt;service
+    android:name=".SyncService"
+    android:exported="true"
+    android:permission="com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE"&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name="com.google.android.gms.gcm.ACTION_TASK_READY" /&gt;
+    &lt;/intent-filter&gt;
+&lt;/service&gt;
+</code></pre>
+
+<p></application>
+```</p>
+
+<h1>Schedule a persistent task</h1>
+
+<p>You construct a <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/PeriodicTask"><code>PeriodicTask</code></a> object using a <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/PeriodicTask.Builder"><code>Builder</code></a>, and then pass that task to a <code>GcmNetworkManager</code> instance - and that's it! You can put this in your <code>SyncService</code> class and call <code>SyncService.scheduleSync(context)</code>:</p>
+
+<p>``` java
+public static void scheduleSync(Context ctx) {</p>
+
+<pre><code>GcmNetworkManager gcmNetworkManager = GcmNetworkManager.getInstance(ctx);
+PeriodicTask periodicTask = new PeriodicTask.Builder()
+        .setPeriod(SYNC_PERIOD_SECONDS) // occurs at *most* once this many seconds - note that you can't control when
+        .setRequiredNetwork(PeriodicTask.NETWORK_STATE_CONNECTED) // various connectivity scenarios are available
+        .setTag(PERIODIC_SYNC_TAG) // returned at execution time to your endpoint
+        .setService(SyncService.class) // the GcmTaskServer you created earlier
+        .setPersisted(true) // persists across reboots or not
+        .setUpdateCurrent(true) // replace an existing task with a matching tag - defaults to false! 
+        .build();
+gcmNetworkManager.schedule(periodicTask);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>I've used the <a href="https://github.com/jonfinerty/Once">Once</a> library to ensure that my periodic sync is scheduled once per app install (on first launch). I just call this method from my Application class <code>onCreate</code>.</p>
+
+<p>``` java
+private void scheduleSync() {</p>
+
+<pre><code>if (!Once.beenDone(Once.THIS_APP_INSTALL, INIT_SYNC_ON_INSTALL)) {
+    SyncService.scheduleSync(this);
+    Once.markDone(INIT_SYNC_ON_INSTALL);
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<h1>Re-schedule on app update</h1>
+
+<p>Finally, we need to ensure that our periodic task is re-scheduled after an app update by overriding the <code>onInitializeTasks</code> method.</p>
+
+<blockquote><p>When your package is removed or updated, all of its network tasks are cleared by the GcmNetworkManager. You can override this method to reschedule them in the case of an updated package. This is not called when your application is first installed.</p>
+
+<p>This is called on your application’s main thread.</p></blockquote>
+
+<p>This is trivial enough to do:</p>
+
+<p>``` java
+@Override
+public void onInitializeTasks() {</p>
+
+<pre><code>super.onInitializeTasks();
+// Re-schedule periodic task on app upgrade.
+SyncService.scheduleSync(this);
+</code></pre>
+
+<p>}
+```</p>
+
+<h1>Test it</h1>
+
+<p>You can test that your background process works by firing off the intent that triggers it:</p>
+
+<p>``` bash
+adb shell am broadcast -a "com.google.android.gms.gcm.ACTION_TRIGGER_TASK" \</p>
+
+<pre><code>-e component speakman.whatsshakingnz/.network.SyncService \
+-e tag speakman.whatsshakingnz.network.SyncService.PERIODIC_SYNC
+</code></pre>
+
+<p>```</p>
+
+<p>Note <code>speakman.whatsshakingnz</code> is the package, and <code>.network.SyncService</code> is the component name within that package. You need to specify the tag you used earlier, too. If you've got a debugger attached you can hit a breakpoint inside your <code>onRunTask</code> method and note that you're <em>not</em> on the main thread.</p>
+
+<h1>Gotchas</h1>
+
+<ul>
+<li>you <strong>have to reschedule on app update</strong> - this is simple enough to do, make sure you remember to do it!</li>
+<li>check for Play Services! It's required for this to work.</li>
+<li>if the network is unavailable/doesn't meet the criteria you specified, you can't force the task to trigger via ADB (useful to remember if you keep your test device in airplane mode!)</li>
+<li>use the tags to filter out different events in the same service - <code>taskParams.getTag()</code> returns the tag that the task was created with.</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
@@ -807,169 +960,6 @@ getMeasuredHeight());
 <h2>Wow, Volley can do lots of stuff!</h2>
 
 <p>And I certainly haven't covered all of it here. There's loads more that it can do. I'd recommend looking through some of the classes in <code>com.android.volley.toolbox</code> to see what else is already written for you, and for some ideas of how to use some of the other cool features it has to offer.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Handling OutOfMemoryError with large bitmaps on older Android devices]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/"/>
-    <updated>2013-11-10T12:42:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices</id>
-    <content type="html"><![CDATA[<p>If you've ever worked with bitmaps on an Android device before, you've <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> 'bitmap size exceeds VM budget'. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
-
-<p><blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote></p>
-
-<p>Depending on what you're doing, there is a way to get around this.</p>
-
-<!-- more -->
-
-
-<p>The situation where I encountered this was at work when working on a control for displaying a seat map for a movie theatre as part of a ticket purchasing wizard. It shows the screen, the seats, some seat numbers, etc. From there the app user is able to pick seats to sit in for watching the movie. Previously this had been built by drawing many <code>Button</code> controls with a custom drawable. This was terribly inefficient, as all those controls had to be totally redrawn whenever the user tried to zoom, and was practically unusable for large theatres (with hundreds of seats) even on top end devices.</p>
-
-<p>Clearly this was due for a rewrite. The method I worked out for doing this was to create a 'base' bitmap from the theatre data showing all empty and already-sold seats. I'd use this as a static base image, and then paint 'selected' seats on top of that as the user taps to select/deselect seats they'd like to sit in.</p>
-
-<p>This method had a few benefits we didn't enjoy with the old method:</p>
-
-<ul>
-<li>we only had to create the whole theatre model (calculating seat positions etc) once, when creating the base image (previously it was re-calculating seat sizes and locations at every zoom level, ugh)</li>
-<li>since it was an image, we could now just drop it inside a <a href="https://github.com/MikeOrtiz/TouchImageView">TouchImageView</a> and that would handle zooming and panning (and <a href="https://github.com/MikeOrtiz/TouchImageView/pull/33">this pull request</a> maps touch inputs back to our original image co-ordinates after zoom)</li>
-<li>the static base image meant we only had to perform N+1 passes across the canvas when drawing seat selections, where N was the number of selected seats (typically low, so this is very fast)</li>
-</ul>
-
-
-<p>So off I went and coded this brilliant design. The code for the <code>SeatingImageView</code> control ended up looking <em>something</em> like this:</p>
-
-<p>``` java
-public class SeatingImageView extends TouchImageView {</p>
-
-<pre><code>private Bitmap mImmutableBase;
-
-public void setBaseImage(Bitmap baseImage) {
-    if (baseImage.isMutable())
-        baseImage = Bitmap.createBitmap(baseImage); // Immutable copy
-    mImmutableBase = baseImage;
-    setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.ARGB_8888, true));
-}
-
-public void drawSeats(List&lt;Drawable&gt; seats) {
-    if (mImmutableBase == null) return;
-
-    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
-    Canvas canvas = new Canvas(mutable);
-    for(Drawable seat : seats) {
-        seat.draw(canvas);
-    }
-
-    setImageBitmap(mutable);
-}
-</code></pre>
-
-<p>}
-```</p>
-
-<p>So you'd set your base image, then overlay some selected seat images on top of that as necessary. I tested this on my phone (Galaxy SII i9100, Android 4.1) and my Nexus 7 (2012 model, Android 4.3) and sent it off to QA to be approved.</p>
-
-<p>But our tester sent it back. She said it was crashing whenever she selected a seat - but only on certain cinemas. This was odd, as I couldn't replicate it at all. I went and had a chat to her, and sure enough, it was definitely crashing on her device (an old HTC running Android 2.3). I borrowed the phone and went about figuring this out.</p>
-
-<p>Of course, it was the dreaded <code>OutOfMemoryError</code>. But how to fix this? I was already capping the size of the bitmap when building the base image and scaling seats down to fit. If I forced the max size to be lower, then large cinemas started to look awfully pixelated when zoomed in. I did some logging of the memory, and it appeared that the OOM was occurring at the time we created the new image with the seats - <code>Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);</code>.</p>
-
-<p>We had in memory at this point 3 copies of the bitmap:</p>
-
-<ol>
-<li>the immutable base image that wasn't being displayed (<code>mImmutableBase</code>)</li>
-<li>the <em>copy</em> of the immutable base we'd created that was currently being displayed to the user (<code>setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.RGB_8888, true));</code>)</li>
-<li>the copy we'd <em>just created</em> to draw the newly selected seats onto (<code>Bitmap mutable = immutablebase.copy(Bitmap.Config.RGB_8888, true);</code>)</li>
-</ol>
-
-
-<p>That seemed easy enough to handle - we'd just get rid of the one being displayed before we created a copy of the immutable base, then we'd only ever have 2 in memory at once. I updated my <code>drawSeats</code> method to look like this:</p>
-
-<p>``` java</p>
-
-<pre><code>public void drawSeats(List&lt;Drawable&gt; seats) {
-    if (mImmutableBase == null) return;
-
-    setImageBitmap(null); // Clear all references to the existing bitmap
-
-    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
-    Canvas canvas = new Canvas(mutable);
-    for(Drawable seat : seats) {
-        seat.draw(canvas);
-    }
-
-    setImageBitmap(mutable);
-}
-</code></pre>
-
-<p>```</p>
-
-<p>But this didn't work either!</p>
-
-<p>Reading through <a href="https://code.google.com/p/android/issues/detail?id=8488#c80">this thread</a> (post #80 down is especially useful) helps to shed some light on what's causing us to run out of memory here. The bitmap has memory in both the native and Dalvik heap, and it's not getting recycled from native quickly enough. Luckily, there is a way to force this to occur.</p>
-
-<p>The fix was to:</p>
-
-<ol>
-<li>acquire a reference to the bitmap that is currently being shown - <code>getDrawable()</code></li>
-<li>tell the <code>ImageView</code> to show nothing - <code>setImageBitmap(null)</code> - while still holding a reference to the old bitmap</li>
-<li>manually call <code>recycle()</code> on the old bitmap - this clears the native heap allocation</li>
-<li>although we <em>shouldn't have to</em> call <code>System.gc()</code>, I found that this was still required to consistently remove the bitmap from memory</li>
-</ol>
-
-
-<p>``` java
-public class SeatingImageView extends TouchImageView {</p>
-
-<pre><code>private Bitmap mImmutableBase;
-
-public void setBaseImage(Bitmap baseImage) {
-    if (baseImage.isMutable())
-        baseImage = Bitmap.createBitmap(baseImage); // Immutable copy
-    mImmutableBase = baseImage;
-    setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.ARGB_8888, true));
-}
-
-public void drawSeats(List&lt;Drawable&gt; seats) {
-    if (mImmutableBase == null) return;
-    recycleOldImage();
-
-    Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);
-    Canvas canvas = new Canvas(mutable);
-    for(Drawable seat : seats) {
-        seat.draw(canvas);
-    }
-
-    setImageBitmap(mutable);
-}
-
-private void recycleOldImage() {
-    Drawable oldImage = getDrawable();
-    if (oldImage != null) {
-        setImageBitmap(null);
-        BitmapDrawable oldBitmap = (BitmapDrawable)oldImage;
-        oldBitmap.getBitmap().recycle();
-        System.gc();
-    }
-}
-</code></pre>
-
-<p>}
-```</p>
-
-<p>This fixed the bug! The memory logging I’d put in showed that were were only keeping at max two copies of the base image in memory at a time, and more importantly we weren’t seeing any crashes.</p>
-
-<p>However, the logs were also showing that we were still precariously close to the memory limit for the device. I was concerned about other devices with <a href="http://stackoverflow.com/questions/4351678/two-questions-about-max-heap-sizes-and-available-memory-in-android">even lower memory limits</a> - or other edge case theatre layouts we didn’t have examples for. This required something of a minor design change to resolve.</p>
-
-<p>I'd been depending on using ARGB_8888 config for the alpha channel, providing a transparent background behind the seat images to match the background for the rest of the screen. After some experimentation I discovered that there was no noticable change in the colour of my seat images when switching to RGB_565, but the memory usage dropped by a large amount - enough that I was happy I wasn't going to hit the cap again. It was simple enough to modify the control to take a 'background' colour at creation, which reproduced the effects of transparency. Of course if you're faced with the same situation but are using a background with a gradient, or a colour not accurately reproducable in RGB_565, this will not work for you as easily.</p>
-
-<p>Other tips:</p>
-
-<ul>
-<li>use RGB_565 if you can - it uses a lot less memory than ARGB_8888 (2 bytes per pixel instead of 4)</li>
-<li>if you're debugging memory issues with bitmaps, <strong>use an Android 3.0 or higher device</strong> to debug, since bitmap memory allocations are reflected correctly in the Dalvik heap on these devices (see the <a href="http://developer.android.com/training/articles/memory.html#Bitmaps">memory docs</a>)</li>
-<li>always test on the lowest spec device you have available to you, even if you're not doing all your development on that</li>
-</ul>
-
 ]]></content>
   </entry>
   

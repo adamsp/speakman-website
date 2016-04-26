@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/feed" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2016-04-21T22:01:37-04:00</updated>
+  <updated>2016-04-26T15:10:21-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,191 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/"/>
+    <updated>2016-04-26T14:55:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android</id>
+    <content type="html"><![CDATA[<p>In the process of rebuilding <a href="https://github.com/adamsp/wsnz-android">What&#8217;s Shaking, NZ?</a>, I needed to implement a periodic network request (literally polling an API). I wanted to use the new <a href="https://developer.android.com/reference/android/app/job/JobScheduler.html">Job Scheduler</a> API, but unfortunately, this is only available on API 21 and above. Luckily we can get similar functionality by using <a href="https://developers.google.com/cloud-messaging/network-manager">GCM Network Manager</a>, as <a href="http://stackoverflow.com/q/25203254/1217087">suggested on StackOverflow</a>. Note that the GCM Network Manager actually uses Job Scheduler behind the scenes in API 21+.</p>
+
+<p>The <a href="https://developers.google.com/cloud-messaging/network-manager">documentation</a> for this is somewhat hand-wavy. Here I attempt to provide a true step-by-step guide to implementing this. I assume you&#8217;re <em>not</em> already using GCM for something else in your app (as that was the case for me).</p>
+
+<!-- more -->
+
+
+<h1>Implement GcmTaskService</h1>
+
+<p>The first step is to import GCM in your <code>build.gradle</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>compile 'com.google.android.gms:play-services-gcm:8.4.0'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now you can implement <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/GcmTaskService"><code>GcmTaskService</code></a>. This is as simple as the following:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>import com.google.android.gms.gcm.GcmNetworkManager;
+</span><span class='line'>import com.google.android.gms.gcm.GcmTaskService;
+</span><span class='line'>import com.google.android.gms.gcm.TaskParams;
+</span><span class='line'>
+</span><span class='line'>public class SyncService extends GcmTaskService {
+</span><span class='line'>    @Override
+</span><span class='line'>    public int onRunTask(TaskParams taskParams) {
+</span><span class='line'>        // Perform your network request. Note you're already off the main thread here.
+</span><span class='line'>        return GcmNetworkManager.RESULT_SUCCESS;
+</span><span class='line'>    }
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Great. So you get a callback, on a different thread, where you can do your stuff.</p>
+
+<h1>Add the service to the manifest</h1>
+
+<p>The instructions say to add the service to the manifest and &#8220;Add all applicable intent filters. See details for intent filter support in the GcmTaskService API reference.&#8221;</p>
+
+<p>Note that the <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/GcmTaskService#constants">GcmTaskService documentation</a> has <code>SERVICE_ACTION_EXECUTE_TASK</code> as the name for the <code>com.google.android.gms.gcm.ACTION_TASK_READY</code> intent filter. This is right now the only thing we need to care about.</p>
+
+<p>We also need to add the <code>RECEIVE_BOOT_COMPLETED</code> permission so that our periodic sync will persist across reboots.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">&quot;android.permission.INTERNET&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'><span class="nt">&lt;uses-permission</span> <span class="na">android:name=</span><span class="s">&quot;android.permission.RECEIVE_BOOT_COMPLETED&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nt">&lt;application</span> <span class="err">...</span> <span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;service</span>
+</span><span class='line'>      <span class="na">android:name=</span><span class="s">&quot;.SyncService&quot;</span>
+</span><span class='line'>      <span class="na">android:exported=</span><span class="s">&quot;true&quot;</span>
+</span><span class='line'>      <span class="na">android:permission=</span><span class="s">&quot;com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;intent-filter&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;action</span> <span class="na">android:name=</span><span class="s">&quot;com.google.android.gms.gcm.ACTION_TASK_READY&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/intent-filter&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/service&gt;</span>
+</span><span class='line'><span class="nt">&lt;/application&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Schedule a persistent task</h1>
+
+<p>You construct a <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/PeriodicTask"><code>PeriodicTask</code></a> object using a <a href="https://developers.google.com/android/reference/com/google/android/gms/gcm/PeriodicTask.Builder"><code>Builder</code></a>, and then pass that task to a <code>GcmNetworkManager</code> instance - and that&#8217;s it! You can put this in your <code>SyncService</code> class and call <code>SyncService.scheduleSync(context)</code>:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">scheduleSync</span><span class="o">(</span><span class="n">Context</span> <span class="n">ctx</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">GcmNetworkManager</span> <span class="n">gcmNetworkManager</span> <span class="o">=</span> <span class="n">GcmNetworkManager</span><span class="o">.</span><span class="na">getInstance</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">PeriodicTask</span> <span class="n">periodicTask</span> <span class="o">=</span> <span class="k">new</span> <span class="n">PeriodicTask</span><span class="o">.</span><span class="na">Builder</span><span class="o">()</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setPeriod</span><span class="o">(</span><span class="n">SYNC_PERIOD_SECONDS</span><span class="o">)</span> <span class="c1">// occurs at *most* once this many seconds - note that you can&#39;t control when</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setRequiredNetwork</span><span class="o">(</span><span class="n">PeriodicTask</span><span class="o">.</span><span class="na">NETWORK_STATE_CONNECTED</span><span class="o">)</span> <span class="c1">// various connectivity scenarios are available</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setTag</span><span class="o">(</span><span class="n">PERIODIC_SYNC_TAG</span><span class="o">)</span> <span class="c1">// returned at execution time to your endpoint</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setService</span><span class="o">(</span><span class="n">SyncService</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="c1">// the GcmTaskServer you created earlier</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setPersisted</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="c1">// persists across reboots or not</span>
+</span><span class='line'>            <span class="o">.</span><span class="na">setUpdateCurrent</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="c1">// replace an existing task with a matching tag - defaults to false! </span>
+</span><span class='line'>            <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">gcmNetworkManager</span><span class="o">.</span><span class="na">schedule</span><span class="o">(</span><span class="n">periodicTask</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&#8217;ve used the <a href="https://github.com/jonfinerty/Once">Once</a> library to ensure that my periodic sync is scheduled once per app install (on first launch). I just call this method from my Application class <code>onCreate</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">scheduleSync</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(!</span><span class="n">Once</span><span class="o">.</span><span class="na">beenDone</span><span class="o">(</span><span class="n">Once</span><span class="o">.</span><span class="na">THIS_APP_INSTALL</span><span class="o">,</span> <span class="n">INIT_SYNC_ON_INSTALL</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">SyncService</span><span class="o">.</span><span class="na">scheduleSync</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Once</span><span class="o">.</span><span class="na">markDone</span><span class="o">(</span><span class="n">INIT_SYNC_ON_INSTALL</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Re-schedule on app update</h1>
+
+<p>Finally, we need to ensure that our periodic task is re-scheduled after an app update by overriding the <code>onInitializeTasks</code> method.</p>
+
+<blockquote><p>When your package is removed or updated, all of its network tasks are cleared by the GcmNetworkManager. You can override this method to reschedule them in the case of an updated package. This is not called when your application is first installed.</p>
+
+<p>This is called on your application’s main thread.</p></blockquote>
+
+<p>This is trivial enough to do:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Override</span>
+</span><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">onInitializeTasks</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">super</span><span class="o">.</span><span class="na">onInitializeTasks</span><span class="o">();</span>
+</span><span class='line'>    <span class="c1">// Re-schedule periodic task on app upgrade.</span>
+</span><span class='line'>    <span class="n">SyncService</span><span class="o">.</span><span class="na">scheduleSync</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Test it</h1>
+
+<p>You can test that your background process works by firing off the intent that triggers it:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>adb shell am broadcast -a <span class="s2">&quot;com.google.android.gms.gcm.ACTION_TRIGGER_TASK&quot;</span> <span class="se">\</span>
+</span><span class='line'>    -e component speakman.whatsshakingnz/.network.SyncService <span class="se">\</span>
+</span><span class='line'>    -e tag speakman.whatsshakingnz.network.SyncService.PERIODIC_SYNC
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note <code>speakman.whatsshakingnz</code> is the package, and <code>.network.SyncService</code> is the component name within that package. You need to specify the tag you used earlier, too. If you&#8217;ve got a debugger attached you can hit a breakpoint inside your <code>onRunTask</code> method and note that you&#8217;re <em>not</em> on the main thread.</p>
+
+<h1>Gotchas</h1>
+
+<ul>
+<li>you <strong>have to reschedule on app update</strong> - this is simple enough to do, make sure you remember to do it!</li>
+<li>check for Play Services! It&#8217;s required for this to work.</li>
+<li>if the network is unavailable/doesn&#8217;t meet the criteria you specified, you can&#8217;t force the task to trigger via ADB (useful to remember if you keep your test device in airplane mode!)</li>
+<li>use the tags to filter out different events in the same service - <code>taskParams.getTag()</code> returns the tag that the task was created with.</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
@@ -1655,22 +1840,6 @@
 <li>always test on the lowest spec device you have available to you, even if you&#8217;re not doing all your development on that</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 6]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/04/20-things-week-6/"/>
-    <updated>2013-11-04T21:12:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/04/20-things-week-6</id>
-    <content type="html"><![CDATA[<p>In case you missed it, the <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Android Daydream</a> I linked to in <a href="http://adamsp.github.com/speakman-website/blog/2013/10/28/20-things-week-5/">last weeks</a> post didn’t actually go up until Wednesday - and the blog post (though dated Monday October 28, when I wrote it) didn’t go up until Tuesday. It was quite late on Monday, and the OS X Mavericks update meant my usual site deployment procedure (<code>rake generate</code>, <code>rake deploy</code>) didn’t work. I had to run <code>rake</code> as sudo for some reason (suspect it was something to do with Ruby in the new OS X?), which changed read permissions on everything, then when I tried to deploy, I had to do it as sudo again, and my Github SSH key is for my user, so that didn’t work. I gave up for the evening and went to bed. I managed to revert everything on Tuesday night, and I’m back to my regular deployment process.</p>
-
-<!-- more -->
-
-
-<p>So after all that, and the fact that I didn’t actually finish the Week 5 code until Wednesday, I had a fairly short Week 6 - especially as Battlefield 4 came out on Friday. I spent most of my spare time over the weekend playing that, knowing I had to come up with something before Monday night.</p>
-
-<p>What I’ve done this week is a very small thing: I’ve installed a new Octopress theme for my site - <a href="https://github.com/tommy351/Octopress-Theme-Slash">Slash</a>. I like this theme a lot better than the default - the social media icons at the top, the font size and style, the layout. I’ve also now got working ‘share’ buttons at the bottom of each post, which is a nice change. In my <a href="http://adamsp.github.com/speakman-website/blog/2013/09/23/20-things-in-20-weeks/">original list of 20+ Things</a>, I suggested &#8220;Fixing the Twitter stream&#8221; down the side - instead, I’ve gotten rid of it, and gone for this new style.</p>
 ]]></content>
   </entry>
   

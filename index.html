@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="Back in November, I had just started using Realm on Android and was having some troubles. I&#8217;d occasionally need to make a model change, and &hellip;">
+	<meta name="description" content="In the process of rebuilding What&#8217;s Shaking, NZ?, I needed to implement a periodic network request (literally polling an API). I wanted to use &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -82,6 +82,50 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/">
+		
+			Implementing GCM Network Manager for periodic network requests on Android</a>
+	</h2>
+	<div class="entry-content">
+		<p>In the process of rebuilding <a href="https://github.com/adamsp/wsnz-android">What&#8217;s Shaking, NZ?</a>, I needed to implement a periodic network request (literally polling an API). I wanted to use the new <a href="https://developer.android.com/reference/android/app/job/JobScheduler.html">Job Scheduler</a> API, but unfortunately, this is only available on API 21 and above. Luckily we can get similar functionality by using <a href="https://developers.google.com/cloud-messaging/network-manager">GCM Network Manager</a>, as <a href="http://stackoverflow.com/q/25203254/1217087">suggested on StackOverflow</a>. Note that the GCM Network Manager actually uses Job Scheduler behind the scenes in API 21+.</p>
+
+<p>The <a href="https://developers.google.com/cloud-messaging/network-manager">documentation</a> for this is somewhat hand-wavy. Here I attempt to provide a true step-by-step guide to implementing this. I assume you&#8217;re <em>not</em> already using GCM for something else in your app (as that was the case for me).</p>
+
+
+		
+		<a href="/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/" class="more-link">Read on &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2016-04-26T14:55:00-04:00" pubdate data-updated="true">Apr 26<span>th</span>, 2016</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/google-play/'>google-play</a>, <a class='category' href='/blog/categories/network/'>network</a>, <a class='category' href='/blog/categories/wsnz/'>wsnz</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -477,48 +521,6 @@
 
 
 <time datetime="2014-01-06T18:06:00-05:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2014/01/01/20-things-weeks-13-and-14/">
-		
-			20 Things, Weeks 13 and 14</a>
-	</h2>
-	<div class="entry-content">
-		<p>You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, 20 Weeks project. I could make excuses about it being Christmas, and being super busy, but that&#8217;d be a lie. I was probably playing <a href="http://us.battle.net/hearthstone/en/">Hearthstone</a>.</p>
-
-
-		
-		<a href="/blog/2014/01/01/20-things-weeks-13-and-14/" class="more-link">Read on &rarr;</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-01T11:49:00-05:00" pubdate data-updated="true">Jan 1<span>st</span>, 2014</time></div>
 	<div class="tags">
 
 

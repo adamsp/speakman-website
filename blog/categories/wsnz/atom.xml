@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: google-play | Adam Speakman]]></title>
-  <link href="http://adamsp.github.com/speakman-website/blog/categories/google-play/atom.xml" rel="self"/>
+  <title><![CDATA[Category: wsnz | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/wsnz/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
   <updated>2016-04-26T15:10:21-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
@@ -163,48 +163,6 @@ adb shell am broadcast -a "com.google.android.gms.gcm.ACTION_TRIGGER_TASK" \</p>
 <li>use the tags to filter out different events in the same service - <code>taskParams.getTag()</code> returns the tag that the task was created with.</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Adding Google Play Services to an Android Studio project]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/"/>
-    <updated>2013-06-23T10:55:00-04:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project</id>
-    <content type="html"><![CDATA[<p>Adding a support library to Android Studio is a bit different to how it's done in Eclipse. Where you'd add a 'project' in Eclipse, in Studio you add a 'Module' (which is a sub-project of your overall application - similar to Projects in a Solution, if you've done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.</p>
-
-<!-- more -->
-
-
-<p><strong>Edit July 10 2013:</strong> Note that this post only applies to projects <strong>not</strong> using Gradle.</p>
-
-<p>Most of this information can be found on the <a href="https://developer.android.com/google/play-services/setup.html">Android Developer site</a>.</p>
-
-<p>This guide assumes you already have an application project set up, and you're looking to add this support library in to enable new features. For setting up the main project, check out the <a href="http://developer.android.com/sdk/installing/studio.html">Android Studio documentation</a>.</p>
-
-<ol>
-<li>Update Google Play Game Services via the SDK Manager - you can launch this from <em>Tools -> Android -> SDK Manager</em>. This will download all the required files to your Android SDK install directory.</li>
-<li>Copy the <code>google-play-services_lib/</code> folder (<strong>the whole folder</strong>, not just the .jar) from  <code>&lt;android-sdk&gt;/extras/google/google_play_services/libproject/google-play-services_lib/</code> to your <code>lib/</code> folder in your project.</li>
-<li>In Android Studio, select <em>File -> Import Module</em>, then select the <code>google-play-services_lib</code> folder (the one you just copied into your project directory, not the one from your SDK directory).</li>
-<li>Make sure 'Create module from existing sources' is selected, then Next, Next, until you reach the end of the wizard.</li>
-<li>Now you have to add a reference to your new module from your existing application. Right click your existing game module (should be the top line in the Project explorer) and select <em>Open Module Settings</em>. Along the left side select <em>Modules</em> and you should see both your existing application module and your newly added library module listed. Make sure your app is selected, then choose the <em>Dependencies</em> tab. There should be a <strong>+</strong> sign at the bottom (on a Mac), or on the right side (on Windows). Click this then select <em>Module dependency</em> and add the <em>google-play-services_lib</em> module.</li>
-<li>Ok, now you have everything set up correctly in your existing app module, but you need to finish setting up the one you just imported. Still in the settings window from the previous step, select the <em>google-play-services_lib</em> module under the <em>Modules</em> section. Again, click the <strong>+</strong> on the Dependencies tab but this time we're going to choose 'Jars or directories'. Navigate to the <code>google-play-services_lib/libs/</code> folder (again, the one in your application directory and not the SDK directory) and pick <em>google-play-services.jar</em>.</li>
-<li>Finally, we have to make sure that other modules have access to the google-play-services.jar. In the <em>Dependencies</em> tab for the <em>google-play-services_lib</em> module, check the 'Export' checkbox for the <em>google-play-services.jar</em> entry. This makes the JAR accessible to any other module that references this one.</li>
-</ol>
-
-
-<p>The important part is that you import the whole project, not just the JAR file. If you only import the JAR, you don't get the associated resources. Check out this <a href="http://www.youtube.com/watch?v=nkJS_W-VC9I">Google Developers</a> video for more detail - it's the first mistake they list.</p>
-
-<p>If you use proguard, add this to your proguard-project.txt:</p>
-
-<pre><code>-keep class * extends java.util.ListResourceBundle {
-    protected Object[][] getContents();
-}
-</code></pre>
-
-<p>You can confirm that it's worked by building the project (you may need to do a <em>Build -> Rebuild Project</em>) and making sure there's no errors. To see the imported module in the Project explorer, switch the drop down at the top of the Project explorer to 'Packages' instead of 'Project'.</p>
-
-<p>If you're adding a project other than Google Play Services, such as <a href="http://actionbarsherlock.com/">ActionBarSherlock</a>, that project may use the Android support library. If you're using this too (as is likely) you need to ensure you only have one support library JAR referenced. You should export the JAR from the library (as in step 7 above) and then delete the one in your own module.</p>
 ]]></content>
   </entry>
   
