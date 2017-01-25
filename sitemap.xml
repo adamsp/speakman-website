@@ -175,12 +175,18 @@
         <lastmod>2016-04-26T15:09:30-04:00</lastmod>
     </url>
     <url>
+        <loc>
+            http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash/
+        </loc>
+        <lastmod>2017-01-24T22:33:44-05:00</lastmod>
+    </url>
+    <url>
         <loc>http://adamsp.github.com/speakman-website/about/</loc>
         <lastmod>2016-02-22T14:10:22-05:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/blog/archives/</loc>
-        <lastmod>2016-04-26T15:09:30-04:00</lastmod>
+        <lastmod>2017-01-24T22:33:44-05:00</lastmod>
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/feed/index.xml</loc>
@@ -188,6 +194,6 @@
     </url>
     <url>
         <loc>http://adamsp.github.com/speakman-website/</loc>
-        <lastmod>2016-04-26T15:09:30-04:00</lastmod>
+        <lastmod>2017-01-24T22:33:44-05:00</lastmod>
     </url>
 </urlset>

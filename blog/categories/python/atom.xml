@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: python | Adam Speakman]]></title>
+  <link href="http://adamsp.github.com/speakman-website/blog/categories/python/atom.xml" rel="self"/>
+  <link href="http://adamsp.github.com/speakman-website/"/>
+  <updated>2017-01-24T22:35:24-05:00</updated>
+  <id>http://adamsp.github.com/speakman-website/</id>
+  <author>
+    <name><![CDATA[Adam]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Tensorflow in Windows Bash]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash/"/>
+    <updated>2017-01-24T21:27:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash</id>
+    <content type="html"><![CDATA[<p>My first job out of university was at a startup doing natural language processing (NLP). Recently I've been rekindling my interest in machine learning, and have been playing with the <a href="https://www.tensorflow.org/">Tensorflow</a> library from Google. I work on a Mac, but at home I'm switching between a Mac and a PC - and ideally I'd like things to just work on whatever machine I'm on. The Tensorflow <a href="https://www.tensorflow.org/get_started/os_setup">setup guide</a> says it requires Python 3.5 for Windows, but I'm using Python 2.7 on my Mac and would like to be able to use files across platforms.</p>
+
+<p>Here's a quick intro to getting set up with Tensorflow for Python 2.7 on Windows (using the recently released <a href="https://msdn.microsoft.com/en-us/commandline/wsl/about">Bash on Windows</a>).</p>
+
+<!-- more -->
+
+
+<h1>Step 1 - Install Bash for Windows</h1>
+
+<p>This is pretty trivial. Just <a href="https://msdn.microsoft.com/en-us/commandline/wsl/install_guide">follow the instructions</a>. I installed this on a Windows 10 64 bit machine with no problems.</p>
+
+<h1>Step 2 - Install Tensorflow</h1>
+
+<p>Now you have a bash shell (which comes with Python 2.7.4), we have to intall &amp; upgrade pip (Tensorflow requires pip 8.1 or later):</p>
+
+<p><code>
+sudo apt-get install python-pip
+sudo pip install --ugprade pip
+source ~/.bashrc
+sudo pip install tensorflow
+</code></p>
+
+<p>You can test that everything worked by opening up a Python interpreter (ie, just type <code>python</code> and hit enter) then importing Tensorflow:</p>
+
+<p><code>
+import tensorflow as tf
+</code></p>
+
+<p>If you get no output, everything worked! <code>exit()</code> that and carry on.</p>
+
+<h1>Step 3 - Usage</h1>
+
+<p>If you'd like to edit your files in the shell, you're basically good to go - though you'll need to install git.</p>
+
+<p>However if you'd like to use a nice GUI editor (such as Github's <a href="https://atom.io/">Atom</a>) you have to beware. There's a blog post which is very explicit that you <a href="https://blogs.msdn.microsoft.com/commandline/2016/11/17/do-not-change-linux-files-using-windows-apps-and-tools/"><em>must not change Linux files from Windows</em></a>. Instead we go the other way, and access the Windows filesystem from the shell. This lets us edit our files in an editor while in a Windows environment but then run our changes from our bash shell (which we just set up with Tensorflow).</p>
+
+<p>The Windows filesystem is located under <code>/mnt/c</code> (or other drive letter), but if things are stored in your user directory then the paths can get a bit long. So first (this is optional) I like to add a shortcut to my working directory so it's easily accessible by adding the following to my <code>~/.profile</code> file:</p>
+
+<p><code>
+export TFSCRATCH=/mnt/c/Users/Adam/SomeDirectory
+</code></p>
+
+<p>You'll need to <code>source ~/.profile</code>, then you can just <code>cd $TFSCRATCH</code> whenever you want to get to your working directory.</p>
+
+<p>If you're using Atom (like I am) there's a handy included extension called <a href="https://github.com/atom/line-ending-selector">Line Ending Selector</a> - it allows you to specify which line endings you'd like to use. Swap it to <code>LF</code> when editing your Python files.</p>
+
+<p>Now, running code is as you'd expect from a bash shell. Here I run the <a href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist_softmax.py">basic MNIST sample from Google</a>:</p>
+
+<p><code>
+adam@ADAM-PC:~$ cd $TFSCRATCH
+adam@ADAM-PC:/mnt/c/Users/Adam/...$ python mnist_basic_google.py
+Successfully downloaded train-images-idx3-ubyte.gz 9912422 bytes.
+Extracting /tmp/tensorflow/mnist/input_data/train-images-idx3-ubyte.gz
+Successfully downloaded train-labels-idx1-ubyte.gz 28881 bytes.
+Extracting /tmp/tensorflow/mnist/input_data/train-labels-idx1-ubyte.gz
+Successfully downloaded t10k-images-idx3-ubyte.gz 1648877 bytes.
+Extracting /tmp/tensorflow/mnist/input_data/t10k-images-idx3-ubyte.gz
+Successfully downloaded t10k-labels-idx1-ubyte.gz 4542 bytes.
+Extracting /tmp/tensorflow/mnist/input_data/t10k-labels-idx1-ubyte.gz
+0.9174
+</code></p>
+
+<p>So; edit in Windows, run in bash. Easy.</p>
+]]></content>
+  </entry>
+  
+</feed>

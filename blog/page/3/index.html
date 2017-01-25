@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="In case you missed it, the Android Daydream I linked to in last weeks post didn’t actually go up until Wednesday - and the blog post (though dated &hellip;">
+	<meta name="description" content="If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve likely encountered the dreaded OutOfMemoryError &#8216;bitmap &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -82,6 +82,53 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">
+		
+			Handling OutOfMemoryError with large bitmaps on older Android devices</a>
+	</h2>
+	<div class="entry-content">
+		<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
+
+<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
+
+
+<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
+
+
+		
+		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/" class="more-link">Read on &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-10T12:42:00-05:00" pubdate data-updated="true">Nov 10<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -469,48 +516,6 @@
 </div>
 </article>
 
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/">
-		
-			Adding Google Play Services to an Android Studio project</a>
-	</h2>
-	<div class="entry-content">
-		<p>Adding a support library to Android Studio is a bit different to how it&#8217;s done in Eclipse. Where you&#8217;d add a &#8216;project&#8217; in Eclipse, in Studio you add a &#8216;Module&#8217; (which is a sub-project of your overall application - similar to Projects in a Solution, if you&#8217;ve done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.</p>
-
-
-		
-		<a href="/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/" class="more-link">Read on &rarr;</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-23T10:55:00-04:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2013</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/android-studio/'>android-studio</a>, <a class='category' href='/blog/categories/google-play/'>google-play</a>
-
-
-</div>
-	
-</div>
-</article>
-
 <nav id="pagenavi">
     
         <a href="/blog/page/2/" class="prev">Prev</a>
@@ -520,7 +525,7 @@
     
     <div class="center"><a href="/blog/archives">Blog Archives</a></div>
 </nav></div>
-	<footer id="footer" class="inner">Copyright &copy; 2016
+	<footer id="footer" class="inner">Copyright &copy; 2017
 
     Adam
 

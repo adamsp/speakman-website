@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, &hellip;">
+	<meta name="description" content="I checked in some code every day this week. That being said, I don&#8217;t really have a &#8216;Thing&#8217; that I&#8217;ve done. Turns out that I &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -82,6 +82,59 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2014/01/06/20-things-week-15/">
+		
+			20 Things, Week 15</a>
+	</h2>
+	<div class="entry-content">
+		<p>I checked in some code every day this week. That being said, I don&#8217;t really have a &#8216;Thing&#8217; that I&#8217;ve done. Turns out that I&#8217;m running out of ideas for small, week-long projects. My plan to do some small things and even a bigger project over my 2 week break didn&#8217;t work out so well - Christmas takes up a <em>lot</em> of time, and there was plenty of other things to do in my time off, too.</p>
+
+<p>So while I haven&#8217;t done any one thing worthy of note, some of the stuff I <em>have</em> done (these are mostly quite trivial):</p>
+
+<ul>
+<li>Implemented <a href="https://github.com/chrisbanes/ActionBar-PullToRefresh">PullToRefresh</a> library</li>
+<li>Implemented the <a href="https://github.com/keyboardsurfer/Crouton">Crouton</a> library for toasts</li>
+<li>Decided that loading 1000+ items with ORMLite to back a <code>ListView</code> was <em>not</em> a good idea and actually got around to writing the plumbing code to use a <code>Cursor</code></li>
+<li>Added a check for &#8216;last checked date&#8217; so we now query for the smallest number of quakes</li>
+</ul>
+
+
+<p><a href="/images/20-things/week_15.PNG"><img class="bottom" src="/images/20-things/week_15.PNG"></a></p>
+
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-06T18:06:00-05:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -482,53 +535,6 @@
 </div>
 </article>
 
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">
-		
-			Handling OutOfMemoryError with large bitmaps on older Android devices</a>
-	</h2>
-	<div class="entry-content">
-		<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
-
-<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
-
-
-<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
-
-
-		
-		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/" class="more-link">Read on &rarr;</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-11-10T12:42:00-05:00" pubdate data-updated="true">Nov 10<span>th</span>, 2013</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>
-
-
-</div>
-	
-</div>
-</article>
-
 <nav id="pagenavi">
     
         <a href="/" class="prev">Prev</a>
@@ -538,7 +544,7 @@
     
     <div class="center"><a href="/blog/archives">Blog Archives</a></div>
 </nav></div>
-	<footer id="footer" class="inner">Copyright &copy; 2016
+	<footer id="footer" class="inner">Copyright &copy; 2017
 
     Adam
 

@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/feed" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2016-04-26T15:10:21-04:00</updated>
+  <updated>2017-01-24T22:35:24-05:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Tensorflow in Windows Bash]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash/"/>
+    <updated>2017-01-24T21:27:00-05:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash</id>
+    <content type="html"><![CDATA[<p>My first job out of university was at a startup doing natural language processing (NLP). Recently I&#8217;ve been rekindling my interest in machine learning, and have been playing with the <a href="https://www.tensorflow.org/">Tensorflow</a> library from Google. I work on a Mac, but at home I&#8217;m switching between a Mac and a PC - and ideally I&#8217;d like things to just work on whatever machine I&#8217;m on. The Tensorflow <a href="https://www.tensorflow.org/get_started/os_setup">setup guide</a> says it requires Python 3.5 for Windows, but I&#8217;m using Python 2.7 on my Mac and would like to be able to use files across platforms.</p>
+
+<p>Here&#8217;s a quick intro to getting set up with Tensorflow for Python 2.7 on Windows (using the recently released <a href="https://msdn.microsoft.com/en-us/commandline/wsl/about">Bash on Windows</a>).</p>
+
+<!-- more -->
+
+
+<h1>Step 1 - Install Bash for Windows</h1>
+
+<p>This is pretty trivial. Just <a href="https://msdn.microsoft.com/en-us/commandline/wsl/install_guide">follow the instructions</a>. I installed this on a Windows 10 64 bit machine with no problems.</p>
+
+<h1>Step 2 - Install Tensorflow</h1>
+
+<p>Now you have a bash shell (which comes with Python 2.7.4), we have to intall &amp; upgrade pip (Tensorflow requires pip 8.1 or later):</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get install python-pip
+</span><span class='line'>sudo pip install --ugprade pip
+</span><span class='line'>source ~/.bashrc
+</span><span class='line'>sudo pip install tensorflow</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can test that everything worked by opening up a Python interpreter (ie, just type <code>python</code> and hit enter) then importing Tensorflow:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>import tensorflow as tf</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you get no output, everything worked! <code>exit()</code> that and carry on.</p>
+
+<h1>Step 3 - Usage</h1>
+
+<p>If you&#8217;d like to edit your files in the shell, you&#8217;re basically good to go - though you&#8217;ll need to install git.</p>
+
+<p>However if you&#8217;d like to use a nice GUI editor (such as Github&#8217;s <a href="https://atom.io/">Atom</a>) you have to beware. There&#8217;s a blog post which is very explicit that you <a href="https://blogs.msdn.microsoft.com/commandline/2016/11/17/do-not-change-linux-files-using-windows-apps-and-tools/"><em>must not change Linux files from Windows</em></a>. Instead we go the other way, and access the Windows filesystem from the shell. This lets us edit our files in an editor while in a Windows environment but then run our changes from our bash shell (which we just set up with Tensorflow).</p>
+
+<p>The Windows filesystem is located under <code>/mnt/c</code> (or other drive letter), but if things are stored in your user directory then the paths can get a bit long. So first (this is optional) I like to add a shortcut to my working directory so it&#8217;s easily accessible by adding the following to my <code>~/.profile</code> file:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>export TFSCRATCH=/mnt/c/Users/Adam/SomeDirectory</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You&#8217;ll need to <code>source ~/.profile</code>, then you can just <code>cd $TFSCRATCH</code> whenever you want to get to your working directory.</p>
+
+<p>If you&#8217;re using Atom (like I am) there&#8217;s a handy included extension called <a href="https://github.com/atom/line-ending-selector">Line Ending Selector</a> - it allows you to specify which line endings you&#8217;d like to use. Swap it to <code>LF</code> when editing your Python files.</p>
+
+<p>Now, running code is as you&#8217;d expect from a bash shell. Here I run the <a href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist_softmax.py">basic MNIST sample from Google</a>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>adam@ADAM-PC:~$ cd $TFSCRATCH
+</span><span class='line'>adam@ADAM-PC:/mnt/c/Users/Adam/...$ python mnist_basic_google.py
+</span><span class='line'>Successfully downloaded train-images-idx3-ubyte.gz 9912422 bytes.
+</span><span class='line'>Extracting /tmp/tensorflow/mnist/input_data/train-images-idx3-ubyte.gz
+</span><span class='line'>Successfully downloaded train-labels-idx1-ubyte.gz 28881 bytes.
+</span><span class='line'>Extracting /tmp/tensorflow/mnist/input_data/train-labels-idx1-ubyte.gz
+</span><span class='line'>Successfully downloaded t10k-images-idx3-ubyte.gz 1648877 bytes.
+</span><span class='line'>Extracting /tmp/tensorflow/mnist/input_data/t10k-images-idx3-ubyte.gz
+</span><span class='line'>Successfully downloaded t10k-labels-idx1-ubyte.gz 4542 bytes.
+</span><span class='line'>Extracting /tmp/tensorflow/mnist/input_data/t10k-labels-idx1-ubyte.gz
+</span><span class='line'>0.9174</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So; edit in Windows, run in bash. Easy.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
@@ -1613,233 +1697,6 @@
     <content type="html"><![CDATA[<p>Not much in the way of code this week; work’s been a bit hectic, and I had a wedding to attend on Saturday. I did write a post on <a href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">avoiding an OutOfMemoryError on older Android devices when displaying large bitmaps</a>.</p>
 
 <p>Speaking of that wedding, it was the one I was going to make a website for - guess that won’t be happening, then&#8230; oops.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Handling OutOfMemoryError with large bitmaps on older Android devices]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/"/>
-    <updated>2013-11-10T12:42:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices</id>
-    <content type="html"><![CDATA[<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
-
-<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
-
-
-<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
-
-<!-- more -->
-
-
-<p>The situation where I encountered this was at work when working on a control for displaying a seat map for a movie theatre as part of a ticket purchasing wizard. It shows the screen, the seats, some seat numbers, etc. From there the app user is able to pick seats to sit in for watching the movie. Previously this had been built by drawing many <code>Button</code> controls with a custom drawable. This was terribly inefficient, as all those controls had to be totally redrawn whenever the user tried to zoom, and was practically unusable for large theatres (with hundreds of seats) even on top end devices.</p>
-
-<p>Clearly this was due for a rewrite. The method I worked out for doing this was to create a &#8216;base&#8217; bitmap from the theatre data showing all empty and already-sold seats. I&#8217;d use this as a static base image, and then paint &#8216;selected&#8217; seats on top of that as the user taps to select/deselect seats they&#8217;d like to sit in.</p>
-
-<p>This method had a few benefits we didn&#8217;t enjoy with the old method:</p>
-
-<ul>
-<li>we only had to create the whole theatre model (calculating seat positions etc) once, when creating the base image (previously it was re-calculating seat sizes and locations at every zoom level, ugh)</li>
-<li>since it was an image, we could now just drop it inside a <a href="https://github.com/MikeOrtiz/TouchImageView">TouchImageView</a> and that would handle zooming and panning (and <a href="https://github.com/MikeOrtiz/TouchImageView/pull/33">this pull request</a> maps touch inputs back to our original image co-ordinates after zoom)</li>
-<li>the static base image meant we only had to perform N+1 passes across the canvas when drawing seat selections, where N was the number of selected seats (typically low, so this is very fast)</li>
-</ul>
-
-
-<p>So off I went and coded this brilliant design. The code for the <code>SeatingImageView</code> control ended up looking <em>something</em> like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
-</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
-</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
-</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>So you&#8217;d set your base image, then overlay some selected seat images on top of that as necessary. I tested this on my phone (Galaxy SII i9100, Android 4.1) and my Nexus 7 (2012 model, Android 4.3) and sent it off to QA to be approved.</p>
-
-<p>But our tester sent it back. She said it was crashing whenever she selected a seat - but only on certain cinemas. This was odd, as I couldn&#8217;t replicate it at all. I went and had a chat to her, and sure enough, it was definitely crashing on her device (an old HTC running Android 2.3). I borrowed the phone and went about figuring this out.</p>
-
-<p>Of course, it was the dreaded <code>OutOfMemoryError</code>. But how to fix this? I was already capping the size of the bitmap when building the base image and scaling seats down to fit. If I forced the max size to be lower, then large cinemas started to look awfully pixelated when zoomed in. I did some logging of the memory, and it appeared that the OOM was occurring at the time we created the new image with the seats - <code>Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);</code>.</p>
-
-<p>We had in memory at this point 3 copies of the bitmap:</p>
-
-<ol>
-<li>the immutable base image that wasn&#8217;t being displayed (<code>mImmutableBase</code>)</li>
-<li>the <em>copy</em> of the immutable base we&#8217;d created that was currently being displayed to the user (<code>setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.RGB_8888, true));</code>)</li>
-<li>the copy we&#8217;d <em>just created</em> to draw the newly selected seats onto (<code>Bitmap mutable = immutablebase.copy(Bitmap.Config.RGB_8888, true);</code>)</li>
-</ol>
-
-
-<p>That seemed easy enough to handle - we&#8217;d just get rid of the one being displayed before we created a copy of the immutable base, then we&#8217;d only ever have 2 in memory at once. I updated my <code>drawSeats</code> method to look like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span> <span class="c1">// Clear all references to the existing bitmap</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>    <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'>    <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>But this didn&#8217;t work either!</p>
-
-<p>Reading through <a href="https://code.google.com/p/android/issues/detail?id=8488#c80">this thread</a> (post #80 down is especially useful) helps to shed some light on what&#8217;s causing us to run out of memory here. The bitmap has memory in both the native and Dalvik heap, and it&#8217;s not getting recycled from native quickly enough. Luckily, there is a way to force this to occur.</p>
-
-<p>The fix was to:</p>
-
-<ol>
-<li>acquire a reference to the bitmap that is currently being shown - <code>getDrawable()</code></li>
-<li>tell the <code>ImageView</code> to show nothing - <code>setImageBitmap(null)</code> - while still holding a reference to the old bitmap</li>
-<li>manually call <code>recycle()</code> on the old bitmap - this clears the native heap allocation</li>
-<li>although we <em>shouldn&#8217;t have to</em> call <code>System.gc()</code>, I found that this was still required to consistently remove the bitmap from memory</li>
-</ol>
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
-</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
-</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
-</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
-</span><span class='line'>        <span class="n">recycleOldImage</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">recycleOldImage</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">Drawable</span> <span class="n">oldImage</span> <span class="o">=</span> <span class="n">getDrawable</span><span class="o">();</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">oldImage</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>            <span class="n">BitmapDrawable</span> <span class="n">oldBitmap</span> <span class="o">=</span> <span class="o">(</span><span class="n">BitmapDrawable</span><span class="o">)</span><span class="n">oldImage</span><span class="o">;</span>
-</span><span class='line'>            <span class="n">oldBitmap</span><span class="o">.</span><span class="na">getBitmap</span><span class="o">().</span><span class="na">recycle</span><span class="o">();</span>
-</span><span class='line'>            <span class="n">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This fixed the bug! The memory logging I’d put in showed that were were only keeping at max two copies of the base image in memory at a time, and more importantly we weren’t seeing any crashes.</p>
-
-<p>However, the logs were also showing that we were still precariously close to the memory limit for the device. I was concerned about other devices with <a href="http://stackoverflow.com/questions/4351678/two-questions-about-max-heap-sizes-and-available-memory-in-android">even lower memory limits</a> - or other edge case theatre layouts we didn’t have examples for. This required something of a minor design change to resolve.</p>
-
-<p>I&#8217;d been depending on using ARGB_8888 config for the alpha channel, providing a transparent background behind the seat images to match the background for the rest of the screen. After some experimentation I discovered that there was no noticable change in the colour of my seat images when switching to RGB_565, but the memory usage dropped by a large amount - enough that I was happy I wasn&#8217;t going to hit the cap again. It was simple enough to modify the control to take a &#8216;background&#8217; colour at creation, which reproduced the effects of transparency. Of course if you&#8217;re faced with the same situation but are using a background with a gradient, or a colour not accurately reproducable in RGB_565, this will not work for you as easily.</p>
-
-<p>Other tips:</p>
-
-<ul>
-<li>use RGB_565 if you can - it uses a lot less memory than ARGB_8888 (2 bytes per pixel instead of 4)</li>
-<li>if you&#8217;re debugging memory issues with bitmaps, <strong>use an Android 3.0 or higher device</strong> to debug, since bitmap memory allocations are reflected correctly in the Dalvik heap on these devices (see the <a href="http://developer.android.com/training/articles/memory.html#Bitmaps">memory docs</a>)</li>
-<li>always test on the lowest spec device you have available to you, even if you&#8217;re not doing all your development on that</li>
-</ul>
-
 ]]></content>
   </entry>
   
