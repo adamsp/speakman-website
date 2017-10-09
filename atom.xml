@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-01-24T22:35:24-05:00</updated>
+  <updated>2017-10-09T16:33:25-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,367 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Asynchronously loading data using Googles Paging Library]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library/"/>
+    <updated>2017-10-09T14:42:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library</id>
+    <content type="html"><![CDATA[<p>The recently released <a href="https://developer.android.com/topic/libraries/architecture/paging.html">Paging Library</a> from Google gives you an easy way to page data into memory off of the main thread. If you want to use it with <a href="https://developer.android.com/topic/libraries/architecture/room.html">Room</a>, then the built-in support makes it trivial. However, if you&#8217;d like to page data that exists elsewhere - from the network or disk, for example - then you have to do a little extra work.</p>
+
+<p>Here I demonstrate how to take existing code that loads a list of screenshots from disk and convert it to load asynchronously using the Paging Library. This example could easily be adapted for network calls.</p>
+
+<!-- more -->
+
+
+<p>Throughout this post we&#8217;ll be using a <code>Screenshot</code> class defined as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">@Parcelize</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">Screenshot</span><span class="p">(</span><span class="k">val</span> <span class="py">uri</span><span class="p">:</span> <span class="n">Uri</span><span class="p">,</span> <span class="k">val</span> <span class="py">width</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="k">val</span> <span class="py">height</span><span class="p">:</span> <span class="n">Int</span><span class="p">)</span> <span class="p">:</span> <span class="n">Parcelable</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You will also need to import the library:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">implementation</span> <span class="s">&quot;android.arch.paging:runtime:1.0.0-alpha2&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Existing code</h2>
+
+<p>When the app launches, it shows the user a list of images from a directory they supply during setup. My existing code was a simple repository that loaded <em>all</em> screenshots (as a Uri and width/height values) from this directory via Android&#8217;s storage access framework. The code was similar to the following:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">override</span> <span class="k">fun</span> <span class="nf">allScreenshots</span><span class="p">():</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">screenshots</span> <span class="p">=</span> <span class="n">documentsAtUri</span><span class="p">(</span><span class="n">screenshotDirectory</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">screenshots</span><span class="p">.</span><span class="n">map</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">getScreenshotFromUri</span><span class="p">(</span><span class="n">DocumentsContract</span><span class="p">.</span><span class="n">buildDocumentUriUsingTree</span><span class="p">(</span><span class="n">it</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">id</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">private</span> <span class="k">fun</span> <span class="nf">getScreenshotFromUri</span><span class="p">(</span><span class="n">uri</span><span class="p">:</span> <span class="n">Uri</span><span class="p">):</span> <span class="n">Screenshot</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="err">(</span><span class="py">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span> <span class="p">=</span> <span class="n">getDimens</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">Screenshot</span><span class="p">(</span><span class="n">uri</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">private</span> <span class="k">fun</span> <span class="nf">getDimens</span><span class="p">(</span><span class="n">uri</span><span class="p">:</span> <span class="n">Uri</span><span class="p">):</span> <span class="n">Pair</span><span class="p">&lt;</span><span class="n">Int</span><span class="p">,</span> <span class="n">Int</span><span class="p">&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">opts</span> <span class="p">=</span> <span class="n">BitmapFactory</span><span class="p">.</span><span class="n">Options</span><span class="p">()</span>
+</span><span class='line'>    <span class="n">opts</span><span class="p">.</span><span class="n">inJustDecodeBounds</span> <span class="p">=</span> <span class="k">true</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">parcelFileDescriptor</span> <span class="p">=</span> <span class="n">contentResolver</span><span class="p">.</span><span class="n">openFileDescriptor</span><span class="p">(</span><span class="n">uri</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">fileDescriptor</span> <span class="p">=</span> <span class="n">parcelFileDescriptor</span><span class="o">!!</span><span class="p">.</span><span class="n">fileDescriptor</span>
+</span><span class='line'>    <span class="n">BitmapFactory</span><span class="p">.</span><span class="n">decodeFileDescriptor</span><span class="p">(</span><span class="n">fileDescriptor</span><span class="p">,</span> <span class="k">null</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">Pair</span><span class="p">(</span><span class="n">opts</span><span class="p">.</span><span class="n">outWidth</span><span class="p">,</span> <span class="n">opts</span><span class="p">.</span><span class="n">outHeight</span><span class="p">)</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, we have to go to disk to get information about every screenshot. This is expensive! On my test device I&#8217;ve only got around 100 screenshots - on a device that&#8217;s been around longer a user could have many hundreds or thousands of screenshots in this folder. Rather than loading these all up front, I need to load these asynchronously. In addition, since these are in a list there&#8217;s a high likelihood that the items further down the list won&#8217;t even be needed. The Paging Library helps with these problems.</p>
+
+<h2>Paging Library Fundamentals</h2>
+
+<p>The Paging Library has 3 different &#8220;levels&#8221; that build on top of each other.</p>
+
+<p>At the base, we have a kind of <a href="https://developer.android.com/reference/android/arch/paging/DataSource.html"><code>DataSource</code></a>. This can be either &#8220;keyed&#8221; (such that you need to know about the item at index N-1 in order to know about the item at index N - like a linked list), or &#8220;tiled&#8221; (such that you can access elements at arbitray indices - like an array list).</p>
+
+<p>Above that, we have a <a href="https://developer.android.com/reference/android/arch/paging/PagedList.html"><code>PagedList</code></a>, which as its name suggests, is a list that pages its data in from a <code>DataSource</code>.</p>
+
+<p>Finally we have the <a href="https://developer.android.com/reference/android/arch/paging/PagedListAdapter.html"><code>PagedListAdapter</code></a>, which is a <code>RecyclerView.Adapter</code> that neatly wraps a <code>PagedList</code>, calling the correct <code>notifyItem...</code> methods for you as your data changes (when you call <code>setList</code> with a new <code>PagedList</code>) or loads in. This is fairly standard <code>RecyclerView</code> boilerplate. If you need some custom behaviour, you can duplicate its functionality - it&#8217;s just a handy wrapper around the <a href="https://developer.android.com/reference/android/arch/paging/PagedListAdapterHelper.html"><code>PagedListAdapterHelper</code></a>.</p>
+
+<h2>Constructing a Data Source</h2>
+
+<p>A <code>DataSource</code> is reasonably simple. For a list like this, we implement a <code>TiledDataSource</code>, doing the expensive disk IO in the <code>loadRange</code> method. The <code>PagedList</code> will call this from a background thread when it is time to load a new page of data.</p>
+
+<p>Note that it does <em>not</em> clamp ranges for you - so if you have 10 items and a page size of 6, your second page will be <code>startPosition = 6</code> and <code>count = 6</code> - which will give you an <code>IndexOutOfBoundsException</code>. Make sure to clamp your inputs as I do here.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">val</span> <span class="py">screenshots</span> <span class="p">=</span> <span class="n">documentsAtUri</span><span class="p">(</span><span class="n">loadScreenshotDirectory</span><span class="p">())</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="py">dataSource</span><span class="p">:</span> <span class="n">DataSource</span><span class="p">&lt;</span><span class="n">Int</span><span class="p">,</span> <span class="n">Screenshot</span><span class="p">&gt;</span> <span class="p">=</span> <span class="k">object</span> <span class="err">: </span><span class="nc">TiledDataSource</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">countItems</span><span class="p">():</span> <span class="n">Int</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">screenshots</span><span class="p">.</span><span class="n">size</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">loadRange</span><span class="p">(</span><span class="n">startPosition</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="n">count</span><span class="p">:</span> <span class="n">Int</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;</span> <span class="p">{</span>
+</span><span class='line'>      <span class="k">val</span> <span class="py">end</span> <span class="p">=</span> <span class="n">minOf</span><span class="p">(</span><span class="n">startPosition</span> <span class="p">+</span> <span class="n">count</span><span class="p">,</span> <span class="n">countItems</span><span class="p">())</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">screenshots</span><span class="p">.</span><span class="n">subList</span><span class="p">(</span><span class="n">startPosition</span><span class="p">,</span> <span class="n">end</span><span class="p">).</span><span class="n">map</span> <span class="p">{</span>
+</span><span class='line'>            <span class="n">getScreenshot</span><span class="p">(</span><span class="n">DocumentsContract</span><span class="p">.</span><span class="n">buildDocumentUriUsingTree</span><span class="p">(</span><span class="n">it</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">id</span><span class="p">))</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Building a Paged List</h2>
+
+<p>For my use-case, 8 elements on a &#8216;page&#8217; was sufficient. I&#8217;m showing elements in a 2-column list; most of the elements are around half the window height. You&#8217;ll need to decide what works well for you.</p>
+
+<p>Note that here we use the default prefetch distance of <code>pageSize</code> - that is, as soon as the first item in a given page of data is requested, the next page will begin loading. Depending on your data, you may want this to be smaller or larger.</p>
+
+<p>We also enable placeholders (this is actually enabled by default). Since we know exactly how many elements are going to be in our list (we have Uris for every screenshot, even if we don&#8217;t have any details about that screenshot yet) we can use null placeholders while the images load - helping avoid weird scrollbars. Our <code>onBindViewHolder</code> has to deal with this later. I&#8217;d recommend <a href="https://developer.android.com/reference/android/arch/paging/PagedList.html">reading the <code>PagedList</code> docs</a> - they go into more detail on placeholders.</p>
+
+<p>You need to supply two <a href="https://developer.android.com/reference/java/util/concurrent/Executor.html"><code>Executor</code></a>s - one for posting back to the main thread, and another for background work. In this example we create a main thread <code>Handler</code> and post events to it directly, but our disk IO <code>Executor</code> is injected from elsewhere.</p>
+
+<p>Finally, this code has one subtle gotcha - the first two pages will be loaded immediately on whatever thread <code>build()</code> is called from! From the docs:</p>
+
+<blockquote><p>Creating a PagedList loads data from the DataSource immediately, and should for this reason be done on a background thread. The constructed PagedList may then be passed to and used on the UI thread. This is done to prevent passing a list with no loaded content to the UI thread, which should generally not be presented to the user.</p></blockquote>
+
+<p>In this case, we&#8217;ll be going to disk 16 times (8 for the first page, and then another 8 as the second page is pre-fetched). I address this later when I wire everything together.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">val</span> <span class="py">mainHandler</span> <span class="p">=</span> <span class="n">Handler</span><span class="p">(</span><span class="n">Looper</span><span class="p">.</span><span class="n">getMainLooper</span><span class="p">())</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="py">pagedList</span> <span class="p">=</span> <span class="n">PagedList</span><span class="p">.</span><span class="n">Builder</span><span class="p">&lt;</span><span class="n">Int</span><span class="p">,</span> <span class="n">Screenshot</span><span class="p">&gt;()</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">setDataSource</span><span class="p">(</span><span class="n">dataSource</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">setMainThreadExecutor</span><span class="p">({</span> <span class="n">mainHandler</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">it</span><span class="p">)</span> <span class="p">})</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">setBackgroundThreadExecutor</span><span class="p">(</span><span class="n">diskExecutor</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">setConfig</span><span class="p">(</span><span class="n">PagedList</span><span class="p">.</span><span class="n">Config</span><span class="p">.</span><span class="n">Builder</span><span class="p">()</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setPageSize</span><span class="p">(</span><span class="m">8</span><span class="p">)</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setEnablePlaceholders</span><span class="p">(</span><span class="k">true</span><span class="p">)</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">build</span><span class="p">())</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">build</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Adding the Adapter</h2>
+
+<p>The simplest part of all. We just extend <code>PagedListAdapter</code>, supplying a simple <code>DiffCallback</code> for comparing <code>Screenshot</code> objects, and implement <code>onBindViewHolder</code> and <code>onCreateViewHolder</code> like normal.</p>
+
+<p>Note if you have custom logic (such as a custom <code>BindingAdapter</code> - not shown here) you need to be aware that the object returned from <code>getItem</code> <em>can be</em> <code>null</code> - these are the placeholders we enabled earlier, and will be <code>null</code> while the data at that index loads. If your page sizes are appropriate, receiving a <code>null</code> object will be rare, but you <em>must</em> handle it.</p>
+
+<figure class='code'><figcaption><span>ScreenshotPickerAdapter.kt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">val</span> <span class="py">DIFF_CALLBACK</span> <span class="p">=</span> <span class="k">object</span> <span class="err">: </span><span class="nc">DiffCallback</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">areItemsTheSame</span><span class="p">(</span><span class="n">oldItem</span><span class="p">:</span> <span class="n">Screenshot</span><span class="p">,</span> <span class="n">newItem</span><span class="p">:</span> <span class="n">Screenshot</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">oldItem</span><span class="p">.</span><span class="n">uri</span> <span class="p">==</span> <span class="n">newItem</span><span class="p">.</span><span class="n">uri</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">areContentsTheSame</span><span class="p">(</span><span class="n">oldItem</span><span class="p">:</span> <span class="n">Screenshot</span><span class="p">,</span> <span class="n">newItem</span><span class="p">:</span> <span class="n">Screenshot</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">oldItem</span><span class="p">.</span><span class="n">uri</span> <span class="p">==</span> <span class="n">newItem</span><span class="p">.</span><span class="n">uri</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">class</span> <span class="nc">ScreenshotPickerAdapter</span><span class="p">(</span><span class="k">val</span> <span class="py">clickHandler</span><span class="p">:</span> <span class="n">ScreenshotPickerSelectionHandler</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">:</span> <span class="n">PagedListAdapter</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">,</span> <span class="n">ScreenshotViewHolder</span><span class="p">&gt;(</span><span class="n">DIFF_CALLBACK</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">onBindViewHolder</span><span class="p">(</span><span class="n">holder</span><span class="p">:</span> <span class="n">ScreenshotViewHolder</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="n">Int</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">val</span> <span class="py">screenshot</span> <span class="p">=</span> <span class="n">getItem</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">holder</span><span class="p">.</span><span class="n">screenshot</span> <span class="p">=</span> <span class="n">screenshot</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">fun</span> <span class="nf">onCreateViewHolder</span><span class="p">(</span><span class="n">parent</span><span class="p">:</span> <span class="n">ViewGroup</span><span class="p">?,</span> <span class="n">viewType</span><span class="p">:</span> <span class="n">Int</span><span class="p">):</span> <span class="n">ScreenshotViewHolder</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">val</span> <span class="py">binding</span><span class="p">:</span> <span class="n">PickerListItemBinding</span> <span class="p">=</span> <span class="n">DataBindingUtil</span><span class="p">.</span><span class="n">inflate</span><span class="p">(</span>
+</span><span class='line'>          <span class="n">LayoutInflater</span><span class="p">.</span><span class="n">from</span><span class="p">(</span><span class="n">parent</span><span class="o">?.</span><span class="n">context</span><span class="p">),</span> <span class="n">R</span><span class="p">.</span><span class="n">layout</span><span class="p">.</span><span class="n">picker_list_item</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="k">false</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">ScreenshotViewHolder</span><span class="p">(</span><span class="n">binding</span><span class="p">,</span> <span class="n">clickHandler</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Wiring it all up</h2>
+
+<p>Now we have all the pieces we can put them together. Note that I supply an async callback for loading the screenshots - we use the disk executor we supply in the constructor to do the actual building (since this loads the first page or more, as mentioned above!) and then set the result on our list once that load has finished.</p>
+
+<p>For brevity, this code doesn&#8217;t consider configuration changes or other kinds of activity destruction.</p>
+
+<figure class='code'><figcaption><span>Executors.kt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="c1">// Define a disk IO executor that can be re-used elsewhere</span>
+</span><span class='line'><span class="k">val</span> <span class="py">diskExecutor</span> <span class="p">=</span> <span class="n">Executors</span><span class="p">.</span><span class="n">newFixedThreadPool</span><span class="p">(</span><span class="m">2</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>MainActivity.kt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">var</span> <span class="py">screenshotLoader</span><span class="p">:</span> <span class="n">ScreenshotLoader</span><span class="p">?</span> <span class="p">=</span> <span class="k">null</span>
+</span><span class='line'><span class="k">var</span> <span class="py">adapter</span><span class="p">:</span> <span class="n">ScreenshotPickerAdapter</span><span class="p">?</span> <span class="p">=</span> <span class="k">null</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">override</span> <span class="k">fun</span> <span class="nf">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="p">:</span> <span class="n">Bundle</span><span class="p">?)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">super</span><span class="p">.</span><span class="n">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">setContentView</span><span class="p">(</span><span class="n">R</span><span class="p">.</span><span class="n">layout</span><span class="p">.</span><span class="n">activity_main</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">screenshotLoader</span> <span class="p">=</span> <span class="n">SAFScreenshotLoader</span><span class="p">(</span><span class="n">contentResolver</span><span class="p">,</span> <span class="n">diskExecutor</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">adapter</span> <span class="p">=</span> <span class="n">ScreenshotPickerAdapter</span><span class="p">(</span><span class="k">this</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">recycler</span> <span class="p">=</span> <span class="n">findViewById</span><span class="p">(</span><span class="n">R</span><span class="p">.</span><span class="n">id</span><span class="p">.</span><span class="n">main_recycler</span><span class="p">)</span> <span class="k">as</span> <span class="n">RecyclerView</span><span class="p">?</span>
+</span><span class='line'>    <span class="n">recycler</span><span class="o">?.</span><span class="n">layoutManager</span> <span class="p">=</span> <span class="n">GridLayoutManager</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="m">2</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">recycler</span><span class="o">?.</span><span class="n">adapter</span> <span class="p">=</span> <span class="n">adapter</span>
+</span><span class='line'>    <span class="n">loadScreenshots</span><span class="p">()</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">private</span> <span class="k">fun</span> <span class="nf">loadScreenshots</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">screenshotLoader</span><span class="o">?.</span><span class="n">allScreenshots</span><span class="p">({</span>
+</span><span class='line'>        <span class="c1">// We could explode here if the activity has been killed</span>
+</span><span class='line'>        <span class="n">runOnUiThread</span> <span class="p">{</span>
+</span><span class='line'>            <span class="n">adapter</span><span class="o">?.</span><span class="n">setList</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">})</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>SAFScreenshotLoader.kt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">override</span> <span class="k">fun</span> <span class="nf">allScreenshots</span><span class="p">(</span><span class="n">resultListener</span><span class="p">:</span> <span class="p">(</span><span class="n">PagedList</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;)</span> <span class="p">-&gt;</span> <span class="n">Unit</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">// This assumes retrieving the Uris is cheap - this whole block could be moved off thread</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">screenshotUris</span> <span class="p">=</span> <span class="n">documentsAtUri</span><span class="p">(</span><span class="n">loadScreenshotDirectory</span><span class="p">())</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">dataSource</span><span class="p">:</span> <span class="n">DataSource</span><span class="p">&lt;</span><span class="n">Int</span><span class="p">,</span> <span class="n">Screenshot</span><span class="p">&gt;</span> <span class="p">=</span> <span class="k">object</span> <span class="err">: </span><span class="nc">TiledDataSource</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">override</span> <span class="k">fun</span> <span class="nf">countItems</span><span class="p">():</span> <span class="n">Int</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">screenshotUris</span><span class="p">.</span><span class="n">size</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">override</span> <span class="k">fun</span> <span class="nf">loadRange</span><span class="p">(</span><span class="n">startPosition</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="n">count</span><span class="p">:</span> <span class="n">Int</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Screenshot</span><span class="p">&gt;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">val</span> <span class="py">end</span> <span class="p">=</span> <span class="n">minOf</span><span class="p">(</span><span class="n">startPosition</span> <span class="p">+</span> <span class="n">count</span><span class="p">,</span> <span class="n">countItems</span><span class="p">())</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">screenshotUris</span><span class="p">.</span><span class="n">subList</span><span class="p">(</span><span class="n">startPosition</span><span class="p">,</span> <span class="n">end</span><span class="p">).</span><span class="n">map</span> <span class="p">{</span>
+</span><span class='line'>                <span class="n">getScreenshot</span><span class="p">(</span><span class="n">DocumentsContract</span><span class="p">.</span><span class="n">buildDocumentUriUsingTree</span><span class="p">(</span><span class="n">it</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="n">it</span><span class="p">.</span><span class="n">id</span><span class="p">))</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">val</span> <span class="py">builder</span> <span class="p">=</span> <span class="n">PagedList</span><span class="p">.</span><span class="n">Builder</span><span class="p">&lt;</span><span class="n">Int</span><span class="p">,</span> <span class="n">Screenshot</span><span class="p">&gt;()</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setDataSource</span><span class="p">(</span><span class="n">dataSource</span><span class="p">)</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setMainThreadExecutor</span><span class="p">({</span> <span class="n">mainHandler</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">it</span><span class="p">)</span> <span class="p">})</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setBackgroundThreadExecutor</span><span class="p">(</span><span class="n">diskExecutor</span><span class="p">)</span>
+</span><span class='line'>            <span class="p">.</span><span class="n">setConfig</span><span class="p">(</span><span class="n">PagedList</span><span class="p">.</span><span class="n">Config</span><span class="p">.</span><span class="n">Builder</span><span class="p">()</span>
+</span><span class='line'>                    <span class="p">.</span><span class="n">setPageSize</span><span class="p">(</span><span class="m">8</span><span class="p">)</span>
+</span><span class='line'>                    <span class="p">.</span><span class="n">setEnablePlaceholders</span><span class="p">(</span><span class="k">true</span><span class="p">)</span>
+</span><span class='line'>                    <span class="p">.</span><span class="n">build</span><span class="p">())</span>
+</span><span class='line'>    <span class="c1">// Note the actual construction happens on an IO thread - the build() call goes to disk</span>
+</span><span class='line'>    <span class="n">diskExecutor</span><span class="p">.</span><span class="n">execute</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">resultListener</span><span class="p">(</span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">())</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Gotchas</h2>
+
+<ul>
+<li>You may have to specify a <code>minHeight</code> on your list items, or otherwise specify the height when a placeholder is used. If you don&#8217;t, the adapter will query for (and the list will try to load) your whole list of 0-height items.</li>
+<li>Don&#8217;t forget the first page is loaded when you call <code>PagedList.Builder.build()</code> - do this off the main thread!</li>
+<li>Experiment with page sizes and prefetch windows. This is entirely dependent on your data.</li>
+<li>Already loaded objects are <strong>not</strong> unloaded. If the user scrolls to the bottom of the list, the first items stay in memory. This is potentially a problem if your objects are large, or your list is long. Here I let <a href="http://square.github.io/picasso/">Picasso</a> load (and unload) the actual memory-intensive bitmaps for me. Storing a list of Uris is cheap.</li>
+<li>You <strong>must</strong> handle null objects returned from <code>getItem</code> if you enable placeholders, even if you never encounter them in your testing.</li>
+<li>The <code>loadRange</code> call is not bounded to the size of the list; you need to do this yourself. It will happily handle results smaller than the requested count, however (i.e. when you&#8217;re at the end of the list).</li>
+<li>If you&#8217;re using <a href="https://developer.android.com/reference/android/arch/lifecycle/LiveData.html"><code>LiveData</code></a>, look into <a href="https://developer.android.com/reference/android/arch/paging/LivePagedListProvider.html"><code>LivePagedListProvider</code></a> as it will do most of this overhead for you.</li>
+<li>The library is still in alpha at the time of this writing; the APIs described here could still change before release.</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Tensorflow in Windows Bash]]></title>
@@ -1686,17 +2047,6 @@
 <p>This weekend I went to <a href="http://devmob.co.nz">devmob</a> in Dunedin. It’s an unconference/barcamp that’s held here for mobile devs from all around the country. Met lots of interesting people and had a great time - but there was no time to write code.</p>
 
 <p>So, this week, I’ve done nothing towards my 20 Things. Unfortunate, but I knew this would happen. Next week I’ll definitely have something out!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 7]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/11/20-things-week-7/"/>
-    <updated>2013-11-11T18:55:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/11/20-things-week-7</id>
-    <content type="html"><![CDATA[<p>Not much in the way of code this week; work’s been a bit hectic, and I had a wedding to attend on Saturday. I did write a post on <a href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">avoiding an OutOfMemoryError on older Android devices when displaying large bitmaps</a>.</p>
-
-<p>Speaking of that wedding, it was the one I was going to make a website for - guess that won’t be happening, then&#8230; oops.</p>
 ]]></content>
   </entry>
   

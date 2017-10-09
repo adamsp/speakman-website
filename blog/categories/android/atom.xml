@@ -4,7 +4,7 @@
   <title><![CDATA[Category: android | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-01-24T22:35:24-05:00</updated>
+  <updated>2017-10-09T16:33:25-04:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -12,6 +12,269 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Asynchronously loading data using Googles Paging Library]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library/"/>
+    <updated>2017-10-09T14:42:00-04:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library</id>
+    <content type="html"><![CDATA[<p>The recently released <a href="https://developer.android.com/topic/libraries/architecture/paging.html">Paging Library</a> from Google gives you an easy way to page data into memory off of the main thread. If you want to use it with <a href="https://developer.android.com/topic/libraries/architecture/room.html">Room</a>, then the built-in support makes it trivial. However, if you'd like to page data that exists elsewhere - from the network or disk, for example - then you have to do a little extra work.</p>
+
+<p>Here I demonstrate how to take existing code that loads a list of screenshots from disk and convert it to load asynchronously using the Paging Library. This example could easily be adapted for network calls.</p>
+
+<!-- more -->
+
+
+<p>Throughout this post we'll be using a <code>Screenshot</code> class defined as follows:</p>
+
+<p><code>kotlin
+@Parcelize
+class Screenshot(val uri: Uri, val width: Int, val height: Int) : Parcelable
+</code></p>
+
+<p>You will also need to import the library:</p>
+
+<p><code>
+implementation "android.arch.paging:runtime:1.0.0-alpha2"
+</code></p>
+
+<h2>Existing code</h2>
+
+<p>When the app launches, it shows the user a list of images from a directory they supply during setup. My existing code was a simple repository that loaded <em>all</em> screenshots (as a Uri and width/height values) from this directory via Android's storage access framework. The code was similar to the following:</p>
+
+<p>``` kotlin
+override fun allScreenshots(): List<Screenshot> {</p>
+
+<pre><code>val screenshots = documentsAtUri(screenshotDirectory)
+return screenshots.map {
+    getScreenshotFromUri(DocumentsContract.buildDocumentUriUsingTree(it.path, it.id))
+}
+</code></pre>
+
+<p>}</p>
+
+<p>private fun getScreenshotFromUri(uri: Uri): Screenshot {</p>
+
+<pre><code>val (width, height) = getDimens(uri)
+return Screenshot(uri, width, height)
+</code></pre>
+
+<p>}</p>
+
+<p>private fun getDimens(uri: Uri): Pair&lt;Int, Int> {</p>
+
+<pre><code>val opts = BitmapFactory.Options()
+opts.inJustDecodeBounds = true
+val parcelFileDescriptor = contentResolver.openFileDescriptor(uri, "r")
+val fileDescriptor = parcelFileDescriptor!!.fileDescriptor
+BitmapFactory.decodeFileDescriptor(fileDescriptor, null, opts)
+return Pair(opts.outWidth, opts.outHeight)
+</code></pre>
+
+<p>}
+```</p>
+
+<p>As you can see, we have to go to disk to get information about every screenshot. This is expensive! On my test device I've only got around 100 screenshots - on a device that's been around longer a user could have many hundreds or thousands of screenshots in this folder. Rather than loading these all up front, I need to load these asynchronously. In addition, since these are in a list there's a high likelihood that the items further down the list won't even be needed. The Paging Library helps with these problems.</p>
+
+<h2>Paging Library Fundamentals</h2>
+
+<p>The Paging Library has 3 different "levels" that build on top of each other.</p>
+
+<p>At the base, we have a kind of <a href="https://developer.android.com/reference/android/arch/paging/DataSource.html"><code>DataSource</code></a>. This can be either "keyed" (such that you need to know about the item at index N-1 in order to know about the item at index N - like a linked list), or "tiled" (such that you can access elements at arbitray indices - like an array list).</p>
+
+<p>Above that, we have a <a href="https://developer.android.com/reference/android/arch/paging/PagedList.html"><code>PagedList</code></a>, which as its name suggests, is a list that pages its data in from a <code>DataSource</code>.</p>
+
+<p>Finally we have the <a href="https://developer.android.com/reference/android/arch/paging/PagedListAdapter.html"><code>PagedListAdapter</code></a>, which is a <code>RecyclerView.Adapter</code> that neatly wraps a <code>PagedList</code>, calling the correct <code>notifyItem...</code> methods for you as your data changes (when you call <code>setList</code> with a new <code>PagedList</code>) or loads in. This is fairly standard <code>RecyclerView</code> boilerplate. If you need some custom behaviour, you can duplicate its functionality - it's just a handy wrapper around the <a href="https://developer.android.com/reference/android/arch/paging/PagedListAdapterHelper.html"><code>PagedListAdapterHelper</code></a>.</p>
+
+<h2>Constructing a Data Source</h2>
+
+<p>A <code>DataSource</code> is reasonably simple. For a list like this, we implement a <code>TiledDataSource</code>, doing the expensive disk IO in the <code>loadRange</code> method. The <code>PagedList</code> will call this from a background thread when it is time to load a new page of data.</p>
+
+<p>Note that it does <em>not</em> clamp ranges for you - so if you have 10 items and a page size of 6, your second page will be <code>startPosition = 6</code> and <code>count = 6</code> - which will give you an <code>IndexOutOfBoundsException</code>. Make sure to clamp your inputs as I do here.</p>
+
+<p>``` kotlin
+val screenshots = documentsAtUri(loadScreenshotDirectory())</p>
+
+<p>val dataSource: DataSource&lt;Int, Screenshot> = object : TiledDataSource<Screenshot>() {</p>
+
+<pre><code>override fun countItems(): Int {
+    return screenshots.size
+}
+
+override fun loadRange(startPosition: Int, count: Int): List&lt;Screenshot&gt; {
+    val end = minOf(startPosition + count, countItems())
+    return screenshots.subList(startPosition, end).map {
+        getScreenshot(DocumentsContract.buildDocumentUriUsingTree(it.path, it.id))
+    }
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<h2>Building a Paged List</h2>
+
+<p>For my use-case, 8 elements on a 'page' was sufficient. I'm showing elements in a 2-column list; most of the elements are around half the window height. You'll need to decide what works well for you.</p>
+
+<p>Note that here we use the default prefetch distance of <code>pageSize</code> - that is, as soon as the first item in a given page of data is requested, the next page will begin loading. Depending on your data, you may want this to be smaller or larger.</p>
+
+<p>We also enable placeholders (this is actually enabled by default). Since we know exactly how many elements are going to be in our list (we have Uris for every screenshot, even if we don't have any details about that screenshot yet) we can use null placeholders while the images load - helping avoid weird scrollbars. Our <code>onBindViewHolder</code> has to deal with this later. I'd recommend <a href="https://developer.android.com/reference/android/arch/paging/PagedList.html">reading the <code>PagedList</code> docs</a> - they go into more detail on placeholders.</p>
+
+<p>You need to supply two <a href="https://developer.android.com/reference/java/util/concurrent/Executor.html"><code>Executor</code></a>s - one for posting back to the main thread, and another for background work. In this example we create a main thread <code>Handler</code> and post events to it directly, but our disk IO <code>Executor</code> is injected from elsewhere.</p>
+
+<p>Finally, this code has one subtle gotcha - the first two pages will be loaded immediately on whatever thread <code>build()</code> is called from! From the docs:</p>
+
+<blockquote><p>Creating a PagedList loads data from the DataSource immediately, and should for this reason be done on a background thread. The constructed PagedList may then be passed to and used on the UI thread. This is done to prevent passing a list with no loaded content to the UI thread, which should generally not be presented to the user.</p></blockquote>
+
+<p>In this case, we'll be going to disk 16 times (8 for the first page, and then another 8 as the second page is pre-fetched). I address this later when I wire everything together.</p>
+
+<p>``` kotlin
+val mainHandler = Handler(Looper.getMainLooper())</p>
+
+<p>val pagedList = PagedList.Builder&lt;Int, Screenshot>()</p>
+
+<pre><code>.setDataSource(dataSource)
+.setMainThreadExecutor({ mainHandler.post(it) })
+.setBackgroundThreadExecutor(diskExecutor)
+.setConfig(PagedList.Config.Builder()
+        .setPageSize(8)
+        .setEnablePlaceholders(true)
+        .build())
+.build()
+</code></pre>
+
+<p>```</p>
+
+<h2>Adding the Adapter</h2>
+
+<p>The simplest part of all. We just extend <code>PagedListAdapter</code>, supplying a simple <code>DiffCallback</code> for comparing <code>Screenshot</code> objects, and implement <code>onBindViewHolder</code> and <code>onCreateViewHolder</code> like normal.</p>
+
+<p>Note if you have custom logic (such as a custom <code>BindingAdapter</code> - not shown here) you need to be aware that the object returned from <code>getItem</code> <em>can be</em> <code>null</code> - these are the placeholders we enabled earlier, and will be <code>null</code> while the data at that index loads. If your page sizes are appropriate, receiving a <code>null</code> object will be rare, but you <em>must</em> handle it.</p>
+
+<p>``` kotlin ScreenshotPickerAdapter.kt
+val DIFF_CALLBACK = object : DiffCallback<Screenshot>() {</p>
+
+<pre><code>override fun areItemsTheSame(oldItem: Screenshot, newItem: Screenshot): Boolean {
+    return oldItem.uri == newItem.uri
+}
+
+override fun areContentsTheSame(oldItem: Screenshot, newItem: Screenshot): Boolean {
+    return oldItem.uri == newItem.uri
+}
+</code></pre>
+
+<p>}</p>
+
+<p>class ScreenshotPickerAdapter(val clickHandler: ScreenshotPickerSelectionHandler)</p>
+
+<pre><code>: PagedListAdapter&lt;Screenshot, ScreenshotViewHolder&gt;(DIFF_CALLBACK) {
+
+override fun onBindViewHolder(holder: ScreenshotViewHolder, position: Int) {
+    val screenshot = getItem(position)
+    holder.screenshot = screenshot
+}
+
+override fun onCreateViewHolder(parent: ViewGroup?, viewType: Int): ScreenshotViewHolder {
+    val binding: PickerListItemBinding = DataBindingUtil.inflate(
+        LayoutInflater.from(parent?.context), R.layout.picker_list_item, parent, false)
+    return ScreenshotViewHolder(binding, clickHandler)
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<h2>Wiring it all up</h2>
+
+<p>Now we have all the pieces we can put them together. Note that I supply an async callback for loading the screenshots - we use the disk executor we supply in the constructor to do the actual building (since this loads the first page or more, as mentioned above!) and then set the result on our list once that load has finished.</p>
+
+<p>For brevity, this code doesn't consider configuration changes or other kinds of activity destruction.</p>
+
+<p><code>kotlin Executors.kt
+// Define a disk IO executor that can be re-used elsewhere
+val diskExecutor = Executors.newFixedThreadPool(2)
+</code></p>
+
+<p>``` kotlin MainActivity.kt
+var screenshotLoader: ScreenshotLoader? = null
+var adapter: ScreenshotPickerAdapter? = null</p>
+
+<p>override fun onCreate(savedInstanceState: Bundle?) {</p>
+
+<pre><code>super.onCreate(savedInstanceState)
+setContentView(R.layout.activity_main)
+screenshotLoader = SAFScreenshotLoader(contentResolver, diskExecutor)
+adapter = ScreenshotPickerAdapter(this)
+val recycler = findViewById(R.id.main_recycler) as RecyclerView?
+recycler?.layoutManager = GridLayoutManager(this, 2)
+recycler?.adapter = adapter
+loadScreenshots()
+</code></pre>
+
+<p>}</p>
+
+<p>private fun loadScreenshots() {</p>
+
+<pre><code>screenshotLoader?.allScreenshots({
+    // We could explode here if the activity has been killed
+    runOnUiThread {
+        adapter?.setList(it)
+    }
+})
+</code></pre>
+
+<p>}
+```</p>
+
+<p>``` kotlin SAFScreenshotLoader.kt
+override fun allScreenshots(resultListener: (PagedList<Screenshot>) -> Unit) {</p>
+
+<pre><code>// This assumes retrieving the Uris is cheap - this whole block could be moved off thread
+val screenshotUris = documentsAtUri(loadScreenshotDirectory())
+val dataSource: DataSource&lt;Int, Screenshot&gt; = object : TiledDataSource&lt;Screenshot&gt;() {
+    override fun countItems(): Int {
+        return screenshotUris.size
+    }
+
+    override fun loadRange(startPosition: Int, count: Int): List&lt;Screenshot&gt; {
+        val end = minOf(startPosition + count, countItems())
+        return screenshotUris.subList(startPosition, end).map {
+            getScreenshot(DocumentsContract.buildDocumentUriUsingTree(it.path, it.id))
+        }
+    }
+}
+val builder = PagedList.Builder&lt;Int, Screenshot&gt;()
+        .setDataSource(dataSource)
+        .setMainThreadExecutor({ mainHandler.post(it) })
+        .setBackgroundThreadExecutor(diskExecutor)
+        .setConfig(PagedList.Config.Builder()
+                .setPageSize(8)
+                .setEnablePlaceholders(true)
+                .build())
+// Note the actual construction happens on an IO thread - the build() call goes to disk
+diskExecutor.execute {
+    resultListener(builder.build())
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<h2>Gotchas</h2>
+
+<ul>
+<li>You may have to specify a <code>minHeight</code> on your list items, or otherwise specify the height when a placeholder is used. If you don't, the adapter will query for (and the list will try to load) your whole list of 0-height items.</li>
+<li>Don't forget the first page is loaded when you call <code>PagedList.Builder.build()</code> - do this off the main thread!</li>
+<li>Experiment with page sizes and prefetch windows. This is entirely dependent on your data.</li>
+<li>Already loaded objects are <strong>not</strong> unloaded. If the user scrolls to the bottom of the list, the first items stay in memory. This is potentially a problem if your objects are large, or your list is long. Here I let <a href="http://square.github.io/picasso/">Picasso</a> load (and unload) the actual memory-intensive bitmaps for me. Storing a list of Uris is cheap.</li>
+<li>You <strong>must</strong> handle null objects returned from <code>getItem</code> if you enable placeholders, even if you never encounter them in your testing.</li>
+<li>The <code>loadRange</code> call is not bounded to the size of the list; you need to do this yourself. It will happily handle results smaller than the requested count, however (i.e. when you're at the end of the list).</li>
+<li>If you're using <a href="https://developer.android.com/reference/android/arch/lifecycle/LiveData.html"><code>LiveData</code></a>, look into <a href="https://developer.android.com/reference/android/arch/paging/LivePagedListProvider.html"><code>LivePagedListProvider</code></a> as it will do most of this overhead for you.</li>
+<li>The library is still in alpha at the time of this writing; the APIs described here could still change before release.</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
@@ -581,385 +844,6 @@ if (byte1 == 0xFF &amp;&amp; byte2 == 0xFE) {
 <p>Wonderful. Note that if you know your file is encoded a certain way, you should <em>always</em> pass the encoding to the reader - never depend on the default charset to be what you need. It's worth spending some time reading about <a href="http://en.wikipedia.org/wiki/Unicode">Unicode</a> and the various encodings you're likely to encounter - <a href="http://en.wikipedia.org/wiki/Windows-1252">Windows-1252 (or CP-1252)</a>, <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and <a href="http://en.wikipedia.org/wiki/UTF-16">UTF-16</a>, and how to interpret the bytes for these encodings. I find <a href="http://www.fileformat.info/info/unicode/char/FEFF/index.htm">fileformat.info</a> to be extremely useful, as well as the <a href="http://sourceforge.net/projects/npp-plugins/files/Hex%20Editor/">HexEditor Notepad++ plugin</a> for looking directly at the bytes (which is reportedly a bit unstable with the latest version of NP++, though I've never had any issues) - there will no doubt be something similar either built in to or available for your text editor of choice.</p>
 
 <p>Text encoding problems are painful to deal with - and if you're not sure what you should be using, <a href="http://www.utf8everywhere.org/">use UTF-8</a>.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
-    <updated>2013-11-25T17:55:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
-    <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
-
-<!-- more -->
-
-
-<p></p>
-
-<h2>Getting the library</h2>
-
-<p>I’ll assume you have <a href="http://git-scm.com/">git</a> and <a href="http://ant.apache.org/">ant</a> installed.</p>
-
-<p>First, we have to get the library:</p>
-
-<p><code>
-git clone https://android.googlesource.com/platform/frameworks/volley
-</code></p>
-
-<p>Now we have the source code, we need to build it:</p>
-
-<p><code>
-cd volley
-ant jar
-</code></p>
-
-<p>Now, we have <code>volley.jar</code> in the <code>bin</code> directory. Copy this into <code>libs</code> in Eclipse (via drag &amp; drop through the GUI so it sets everything up properly) or set it up in your <code>build.gradle</code> if you’re using Studio. Wonderful.</p>
-
-<h2>Some basic setup</h2>
-
-<p>Volley works by sending requests to a <code>RequestQueue</code>. To create one of these requests, you override the <code>Request</code> object and implement a few methods:</p>
-
-<p>``` java
-queue.add(new Request<String>(Method.GET, url, errorListener) {</p>
-
-<pre><code>@Override
-protected Response&lt;String&gt; parseNetworkResponse(NetworkResponse response) {
-    // TODO Auto-generated method stub
-    return null;
-}
-
-@Override
-protected void deliverResponse(String response) {
-    // TODO Auto-generated method stub
-
-}});
-</code></pre>
-
-<p>```</p>
-
-<p>You can send these with a priority (by overriding <code>getPriority()</code>), so that higher priority requests get sent to the front of the queue, not the back. Useful if, for example, you’re loading some images in the background, but the user clicks on something that needs immediate download.</p>
-
-<p>Before we can use a queue, we have to set one up. This should done as a singleton. Since the easiest way of creating a <code>RequestQueue</code> requires a <code>Context</code>, you can either subclass <code>Application</code> (which the official docs advise against) or do it this way:</p>
-
-<p>``` java VolleyProvider.java
-public class VolleyProvider {</p>
-
-<pre><code>private static RequestQueue queue = null;
-
-private VolleyProvider() { }
-
-public static synchronized RequestQueue getQueue(Context ctx) {
-    if (queue == null) {
-        queue = Volley.newRequestQueue(ctx.getApplicationContext());
-    }
-    return queue;
-}
-</code></pre>
-
-<p>}
-```</p>
-
-<p>And usage:</p>
-
-<p><code>java
-RequestQueue queue = VolleyProvider.getQueue(mContext);
-</code></p>
-
-<p>There are a few other ways of constructing a queue, allowing you to specify your own HTTP stack, cache, thread pool size, etc.</p>
-
-<h2>Now let’s GET some JSON</h2>
-
-<p>So now we've got our default queue set up, we can send a request. As you saw earlier, a request requires you to implement two methods - <code>parseNetworkResponse</code> and <code>deliverResponse</code>. The first of these methods parses your network response into some object that you're expecting, <strong>from a worker thread</strong>. The second delivers that response back to your UI thread, <strong>unless <code>parseNetworkResponse</code> returns <code>null</code></strong>.</p>
-
-<p>To fetch some simple JSON back from a given URL, there's a convenient utility class that comes packaged in <code>com.android.volley.toolbox</code> called <code>JsonRequest</code>.</p>
-
-<p>This class manages parsing any request body string into a byte array (the <code>getBody</code> method returns a <code>byte[]</code>), as well as specifying the content type headers, etc. You still have to implement the <code>parseNetworkResponse</code> abstract method from before, though you now supply a listener for the success case instead of an override. So now our request looks a bit like this (using <a href="https://code.google.com/p/google-gson/">Gson</a> for parsing the response, because it's awesome):</p>
-
-<p>``` java
-public class Person {</p>
-
-<pre><code>long id;
-String firstName;
-String lastName;
-String address;
-</code></pre>
-
-<p>}</p>
-
-<p>...</p>
-
-<p>String url = "http://person.com/person?id=1234";
-Request request = new JsonRequest<Person>(Method.GET, url, null, new Listener<Person>() {</p>
-
-<pre><code>@Override
-public void onResponse(Person response) {
-    // Do something with our person object 
-}
-</code></pre>
-
-<p>}, new Response.ErrorListener() {</p>
-
-<pre><code>@Override
-public void onErrorResponse(VolleyError error) {
-    // Handle the error 
-    // error.networkResponse.statusCode
-    // error.networkResponse.data
-}
-</code></pre>
-
-<p>}) {</p>
-
-<pre><code>@Override
-protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
-    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
-    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
-    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
-    return result;
-}
-</code></pre>
-
-<p>};
-queue.add(request);
-```</p>
-
-<h2>And POST some back to the server</h2>
-
-<p>POSTing JSON back is equally as easy! Instead of passing in null for our body, we pass in a JSON String.</p>
-
-<p>``` java
-String url = "http://person.com/person/update?id=1234";
-String body = new GsonBuilder().create().toJson(somePerson);
-Request request = new JsonRequest<Person>(Method.POST, url, body, new Listener<Person>() {</p>
-
-<pre><code>@Override
-public void onResponse(Person response) {
-    // Do something with our person object 
-}
-</code></pre>
-
-<p>}, new Response.ErrorListener() {</p>
-
-<pre><code>@Override
-public void onErrorResponse(VolleyError error) {
-    // Handle the error 
-    // error.networkResponse.statusCode
-    // error.networkResponse.data
-}
-</code></pre>
-
-<p>}) {</p>
-
-<pre><code>@Override
-protected Response&lt;Person&gt; parseNetworkResponse(NetworkResponse response) {
-    String jsonString = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
-    Person person = new GsonBuilder().create().fromJson(jsonString, Person.class);
-    Response&lt;Person&gt; result = Response.success(person, HttpHeaderParser.parseCacheHeaders(response));
-    return result;
-}
-</code></pre>
-
-<p>};
-```</p>
-
-<h2>Is there an easier way?</h2>
-
-<p>Sort-of. I've abstracted the JSON parsing out so you only have to handle the success and the failure cases. If you've got more complex objects that need custom type adapters, you could put the Gson object creation and type adapter registration into another class somewhere and call it from here. Just drop this <code>GsonRequest</code> class in and you can use it by simply passing in the class of object you expect, as follows.</p>
-
-<p>``` java GsonRequest.java https://gist.github.com/adamsp/7637132
-/<em>*
- * Copyright 2013 Adam Speakman
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- </em>/
-package your.package.here;</p>
-
-<p>import java.io.UnsupportedEncodingException;</p>
-
-<p>import com.android.volley.NetworkResponse;
-import com.android.volley.ParseError;
-import com.android.volley.Response;
-import com.android.volley.Response.ErrorListener;
-import com.android.volley.Response.Listener;
-import com.android.volley.toolbox.HttpHeaderParser;
-import com.android.volley.toolbox.JsonRequest;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;</p>
-
-<p>public class GsonRequest<T> extends JsonRequest<T> {</p>
-
-<pre><code>Class&lt;T&gt; mResponseClass;
-
-public GsonRequest(int method, String url, String requestBody, Class&lt;T&gt; responseClass, Listener&lt;T&gt; listener,
-        ErrorListener errorListener) {
-    super(method, url, requestBody, listener, errorListener);
-    mResponseClass = responseClass;
-    // Do some generic stuff in here - for example, set your retry policy to
-    // longer if you know all your requests are going to take &gt; 2.5 seconds
-    // etc etc...
-}
-
-@Override
-protected Response&lt;T&gt; parseNetworkResponse(NetworkResponse networkResponse) {
-    try {
-        String jsonString = new String(networkResponse.data, HttpHeaderParser.parseCharset(networkResponse.headers));
-        T response = new GsonBuilder().create().fromJson(jsonString, mResponseClass);
-        com.android.volley.Response&lt;T&gt; result = com.android.volley.Response.success(response,
-                HttpHeaderParser.parseCacheHeaders(networkResponse));
-        return result;
-    } catch (UnsupportedEncodingException e) {
-        return com.android.volley.Response.error(new ParseError(e));
-    } catch (JsonSyntaxException e) {
-        return com.android.volley.Response.error(new ParseError(e));
-    }
-}
-</code></pre>
-
-<p>}</p>
-
-<p>```</p>
-
-<p>And usage:</p>
-
-<p>``` java
-Request request = new GsonRequest<T>(Method.POST, url, body, Person.class, new Listener<Person>() {</p>
-
-<pre><code>@Override
-public void onResponse(Person response) {
-    // Do something with our person object 
-}
-</code></pre>
-
-<p>}, new Response.ErrorListener() {</p>
-
-<pre><code>@Override
-public void onErrorResponse(VolleyError error) {
-    // Handle the error 
-    // error.networkResponse.statusCode
-    // error.networkResponse.data
-}
-</code></pre>
-
-<p>});
-```</p>
-
-<h2>What about that easy image loading?</h2>
-
-<p>Loading images with Volley is one of my favourite features of the library. Once it's setup, it's really easy to use. It handles loading images off the UI thread, can show a default image and an error one, and handles caching all for you. You need to set up an <code>ImageLoader</code>, similar to how you set up the <code>RequestQueue</code> as a singleton:</p>
-
-<p>``` java ImageLoaderProvider.java
-public class ImageLoaderProvider {</p>
-
-<pre><code>private static ImageLoader imageLoader = null;
-
-private ImageLoaderProvider() { }
-
-public static synchronized ImageLoader getImageLoader(Context ctx, RequestQueue queue) {
-    if (imageLoader == null) {
-        imageLoader = new ImageLoader(queue, new LruBitmapCache(getCacheSize(ctx)));
-    }
-    return imageLoader;
-}
-
-/**
- * Returns a cache size equal to approximately three screens worth of images.
- */
-private int getCacheSize(Context ctx) {
-    final DisplayMetrics displayMetrics = ctx.getResources().getDisplayMetrics();
-    final int screenWidth = displayMetrics.widthPixels;
-    final int screenHeight = displayMetrics.heightPixels;
-    final int screenBytes = screenWidth * screenHeight * 4; // 4 bytes per pixel
-
-    return screenBytes * 3;
-}
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Now, replace your <code>ImageView</code> objects with <code>NetworkImageView</code> ones:</p>
-
-<p>``` xml</p>
-
-<pre><code>&lt;com.android.volley.toolbox.NetworkImageView
-    android:id="@+id/some_image"
-    ... /&gt;
-</code></pre>
-
-<p>```</p>
-
-<p>And finally, all you need to do is pass your <code>NetworkImageView</code> the URL of the image you'd like loaded, and the <code>ImageLoader</code>:</p>
-
-<p><code>java
-ImageLoader imageLoader = ImageLoaderProvider.getImageLoader(mContext, VolleyProvider.getQueue(mContext));
-((NetworkImageView)findViewById(R.id.some_image)).setImageUrl(imgUrl, imageLoader);
-</code></p>
-
-<p>There are also methods available such as <code>setDefaultImageResId</code> and <code>setErrorImageResId</code>, for supplying default and error resources.</p>
-
-<h2>Anything else?</h2>
-
-<p>Volley has a default TTL on requests of 2.5 seconds - after this, it'll retry the request. This can result in some unexpected behaviour - for example where your error listener gets called (immediately after the retry), then your success listener gets called a little while later (when the original request returns). You can fix this by specifying a timeout in your request:</p>
-
-<p><code>java
-public static final int REQUEST_TIMEOUT_MS = 10000;
-...
-request.setRetryPolicy(new DefaultRetryPolicy(REQUEST_TIMEOUT_MS, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-</code></p>
-
-<p>Another thing to be aware of is that the image loading will cache images in the full size they come down as. This means if you’re downloading images at full resolution but only displaying them at a much smaller one, you’re going to be caching them at full res. If this is in a list view, you’re going to be pushing stuff out of the cache (and then re-downloading them) a lot more often than desirable.</p>
-
-<p>You can get around this by changing some code in <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java"><code>NetworkImageView</code></a>. The important bit is near the end of the <code>loadImageIfNecessary(final boolean isInLayoutPass)</code> method. The code makes a call to the following method in the <code>ImageLoader</code> class:</p>
-
-<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
-public ImageContainer get(String requestUrl, final ImageListener listener) {</p>
-
-<pre><code>return get(requestUrl, listener, 0, 0);
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Notice how that calls an overload that takes some <code>int</code> values?</p>
-
-<p>``` java ImageLoader.java https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageLoader.java
-public ImageContainer get(String requestUrl, ImageListener imageListener,</p>
-
-<pre><code>        int maxWidth, int maxHeight) {
-...
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Well, if we ‘fix’ the code back in <code>NetworkImageView</code> to pass in the width &amp; height of the view, then the image gets scaled down and cached at the smaller size (this takes is utilised in the <code>doParse</code> method of <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/ImageRequest.java"><code>ImageRequest</code></a>:</p>
-
-<p>``` java NetworkImageLoader.java
-ImageContainer newContainer = mImageLoader.get(mUrl,</p>
-
-<pre><code>new ImageListener() {
-    ...
-},
-getMeasuredWidth(),
-getMeasuredHeight());
-</code></pre>
-
-<p>```</p>
-
-<p>Note that if you pass the image URL in for use in a different place, <strong>it’ll use the (scaled down) image from the cache</strong> - so if you need the full resolution image, this solution will need some modification.</p>
-
-<h2>Wow, Volley can do lots of stuff!</h2>
-
-<p>And I certainly haven't covered all of it here. There's loads more that it can do. I'd recommend looking through some of the classes in <code>com.android.volley.toolbox</code> to see what else is already written for you, and for some ideas of how to use some of the other cool features it has to offer.</p>
 ]]></content>
   </entry>
   
