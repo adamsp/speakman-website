@@ -4,6 +4,7 @@ title: "20 Things in 20 Weeks"
 date: 2013-09-23 19:39
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Recently I've been realising more and more how much time I spend doing things that aren't productive. Watching TV, playing video games, etc. While some down time is important, I've got all these ideas rattling around my head that I'd love to work on, but I keep putting off until some ever-distant 'later'. So I've decided that for the next few months I'd like to be (more) productive, and I'm setting myself a challenge. I plan on implementing **20 Things in 20 Weeks**. Some of these ideas are tiny apps, or blog posts, or scripts, and will only take a few hours to complete. Others are rather large and may take a few weeks of solid work.

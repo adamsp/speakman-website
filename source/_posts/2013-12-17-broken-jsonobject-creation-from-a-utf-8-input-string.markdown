@@ -3,7 +3,7 @@ layout: post
 title: "Broken JSONObject creation from a UTF-8 input String"
 date: 2013-12-17 06:04
 comments: true
-categories: 20-things-20-weeks android java text-encoding
+categories: android java text-encoding
 ---
 
 > 12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject

@@ -3,7 +3,7 @@ layout: post
 title: "Getting started with Volley for Android"
 date: 2013-11-25 17:55
 comments: true
-categories: 20-things-20-weeks android volley
+categories: android volley
 ---
 
 [Volley](https://android.googlesource.com/platform/frameworks/volley) is a new Android networking library from Google (well, by ‘new’ I mean from [May, at I/O 2013](https://developers.google.com/events/io/sessions/325304728) - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library [depending on Android version](https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java), and a nifty view for [automatically loading images](https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java). Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.

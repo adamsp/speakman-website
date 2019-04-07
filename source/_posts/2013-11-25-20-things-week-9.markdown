@@ -4,6 +4,7 @@ title: "20 Things, Week 9"
 date: 2013-11-25 20:01
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 So this week, like most of the Things I've done for this project, I wrote a blog post. Shocking.

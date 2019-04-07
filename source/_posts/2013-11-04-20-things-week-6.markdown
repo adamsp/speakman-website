@@ -4,6 +4,7 @@ title: "20 Things, Week 6"
 date: 2013-11-04 21:12
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 In case you missed it, the [Android Daydream](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets) I linked to in [last weeks](/blog/2013/10/28/20-things-week-5/) post didn’t actually go up until Wednesday - and the blog post (though dated Monday October 28, when I wrote it) didn’t go up until Tuesday. It was quite late on Monday, and the OS X Mavericks update meant my usual site deployment procedure (`rake generate`, `rake deploy`) didn’t work. I had to run `rake` as sudo for some reason (suspect it was something to do with Ruby in the new OS X?), which changed read permissions on everything, then when I tried to deploy, I had to do it as sudo again, and my Github SSH key is for my user, so that didn’t work. I gave up for the evening and went to bed. I managed to revert everything on Tuesday night, and I’m back to my regular deployment process.

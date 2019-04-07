@@ -4,6 +4,7 @@ title: "20 Things, Week 4"
 date: 2013-10-21 21:34
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 This week I've done a fair bit of work. I just finished a blog post on [Currency localisation](/blog/2013/10/21/android-currency-localisation-hell/) which I've had on the back burner for some time - now I remember why, even writing that post gave me a headache. Currency formatting is a giant mess, as the formatting tables for most locales are pretty incomplete.

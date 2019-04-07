@@ -3,7 +3,7 @@ layout: post
 title: "Handling OutOfMemoryError with large bitmaps on older Android devices"
 date: 2013-11-10 12:42
 comments: true
-categories: android 20-things-20-weeks
+categories: android
 ---
 
 If you've ever worked with bitmaps on an Android device before, you've [likely](http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object) [encountered](http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1) the [dreaded](https://code.google.com/p/android/issues/detail?id=8488) `OutOfMemoryError` 'bitmap size exceeds VM budget'. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:

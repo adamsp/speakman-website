@@ -4,6 +4,7 @@ title: "20 Things, Week 5"
 date: 2013-10-28 20:07
 comments: true
 categories: android 20-things-20-weeks
+published: false
 ---
 
 This week I wrote [Dream in Tweets](https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets), which is an Android Daydream that shows the logged in users Twitter feed. A Daydream is effectively a screen saver that runs on Android 4.2 and up. But unlike a screensaver, it can do everything you can do in a regular Activity.

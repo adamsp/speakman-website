@@ -4,6 +4,7 @@ title: "20 Things, Week 8"
 date: 2013-11-18 20:24
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 We had a crazy week at work this week; we’re doing a rewrite of our app, and we had an internal stakeholder demo. Was doing some long hours.

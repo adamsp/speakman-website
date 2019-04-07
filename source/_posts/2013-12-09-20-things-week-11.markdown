@@ -4,6 +4,7 @@ title: "20 Things, Week 11"
 date: 2013-12-09 21:03
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Once again, nothing to present this week. I've continued looking into this bug in KitKat that I mentioned last week; I've spent most of my time trying to replicate it in a minimal amount of code. This included exploring the [OkHttp tests](https://github.com/square/okhttp) (which was... an interesting exercise), and modifying the sample code provided for the [original bug](https://code.google.com/p/android/issues/detail?id=38817) whose fix I suspect introduced this problem.

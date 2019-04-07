@@ -4,6 +4,7 @@ title: "20 Things, Week 3"
 date: 2013-10-14 20:15
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 This week I posted up a Gist showing [how to parse WCF-serialised JSON DateTime objects in Java](https://gist.github.com/adamsp/6914482). I'd done this at work a while ago and saw yet another question on StackOverflow asking how to do it. A quick Google showed there still wasn't any quality examples of how to do it (there were a bunch of ways to do it, but none considered all cases), so I posted that example up.

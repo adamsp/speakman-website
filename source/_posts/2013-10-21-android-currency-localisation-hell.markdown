@@ -3,7 +3,7 @@ layout: post
 title: "Android Currency Localisation Hell"
 date: 2013-10-21 17:45
 comments: true
-categories: android 20-things-20-weeks
+categories: android
 ---
 
 We had a customer at work recently who had a special requirement around multiple currency support in our Android app. They have cinema sites in multiple countries, and they want customers to see the correct currency symbol when viewing sessions for a site. Up until now, the app has only ever had to deal with single currencies on a per-customer (and hence per-build) basis.

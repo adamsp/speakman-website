@@ -4,6 +4,7 @@ title: "20 Things, Week 1"
 date: 2013-09-30 20:52
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Week 1 of my 20 Things in 20 Weeks project has gone well. I've finished one project and made some significant progress on another. I've managed to work on things 4 out of 7 days this week, even if only for an hour or two. I've found I've managed to get quite a bit done every time I sit down to work for a short period; problems are easily solved when approached with a fresh mind.

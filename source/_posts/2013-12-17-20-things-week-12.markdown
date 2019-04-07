@@ -4,6 +4,7 @@ title: "20 Things Week 12"
 date: 2013-12-17 06:11
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Actually managed to get some code written this week, though it's still pretty rough - I've got a basic widget working for What's Shaking, NZ? for Android. Exciting stuff; that'll be polished up and good to go next week. It was actually really easy to do, as I can update it directly from my existing background service (which polls the NZ Geonet API).

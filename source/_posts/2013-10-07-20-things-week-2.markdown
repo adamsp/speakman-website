@@ -4,6 +4,7 @@ title: "20 Things, Week 2"
 date: 2013-10-07 20:00
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Week 2 has not gone so well. I've managed to produce what I wanted (a MultiColumnListView control for Android), but I encountered more problems than I expected. Really, I should've expected that. It's software development we're talking about here, after all.

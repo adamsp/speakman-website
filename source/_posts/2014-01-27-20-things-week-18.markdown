@@ -4,6 +4,7 @@ title: "20 Things, Week 18"
 date: 2014-01-27 17:36
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 [Last week](/blog/2014/01/20/20-things-week-17/) I wrote a [Sudoku solver script](https://github.com/adamsp/sudoku-solver) in Python. That was fun and all, but as my girlfriend pointed out - it's not really usable for, er, well, most people. So this week I decided to make it a bit more versatile and build it into a service, with a website to go with it. It's currently [up on Github](https://github.com/adamsp/sudoku-solver-gae) and once I've added some polish to the website (heh, it's pretty awful right now) I'll get it up on App Engine.

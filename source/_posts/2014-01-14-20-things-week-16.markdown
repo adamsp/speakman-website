@@ -4,6 +4,7 @@ title: "20 Things, Week 16"
 date: 2014-01-14 06:44
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 I had my first open-source [pull request merged](https://github.com/codazzo/dogr/pull/2) this week, into [Dogr.io](http://dogr.io).

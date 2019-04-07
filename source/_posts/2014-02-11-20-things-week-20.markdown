@@ -4,6 +4,7 @@ title: "20 Things, Week 20"
 date: 2014-02-11 19:12
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 
 Week 20 of my [20 Things in 20 Weeks](../../../../2013/09/23/20-things-in-20-weeks/) project. I've finally made it. So, how did I do?

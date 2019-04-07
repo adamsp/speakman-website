@@ -4,6 +4,7 @@ title: "20 Things, Week 17"
 date: 2014-01-20 20:06
 comments: true
 categories: 20-things-20-weeks
+published: false
 ---
 This week I finally got around to doing something I've wanted to do for a while; I wrote a [Sudoku Solver in Python](https://github.com/adamsp/sudoku-solver).
 
