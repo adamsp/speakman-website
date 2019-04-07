@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content="The recently released Paging Library from Google gives you an easy way to page data into memory off of the main thread. If you want to use it with &hellip;">
+	<meta name="description" content="Ever wonder why Mockito will occasionally give you an UnfinishedStubbingException even though you clearly finished the stubbing? For example, the &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -53,8 +53,6 @@
 	<div class="social">
 		
 		
-		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
-		
 		
 		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
 		
@@ -82,6 +80,90 @@
 		
 	
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests/">
+		
+			Mockito UnfinishedStubbingException in tests</a>
+	</h2>
+	<div class="entry-content">
+		<p>Ever wonder why Mockito will occasionally give you an <code>UnfinishedStubbingException</code> even though you <em>clearly</em> finished the stubbing?</p>
+
+<p>For example, the following code will fail at runtime (<code>mockChannel</code> has been setup earlier):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">whenever</span><span class="p">(</span><span class="n">mockChannelNameProvider</span><span class="p">.</span><span class="n">nameForChannel</span><span class="p">(</span><span class="n">mockChannel</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">thenReturn</span><span class="p">(</span><span class="n">mockChannel</span><span class="p">.</span><span class="n">id</span><span class="p">())</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With an exception like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">org</span><span class="p">.</span><span class="n">mockito</span><span class="p">.</span><span class="n">exceptions</span><span class="p">.</span><span class="n">misusing</span><span class="p">.</span><span class="n">UnfinishedStubbingException</span><span class="p">:</span>
+</span><span class='line'><span class="n">Unfinished</span> <span class="n">stubbing</span> <span class="n">detected</span> <span class="n">here</span><span class="p">:</span>
+</span><span class='line'><span class="p">-&gt;</span> <span class="n">at</span> <span class="n">ExampleFailingTestKotlin</span><span class="p">.</span><span class="n">setupChannelName</span><span class="p">(</span><span class="n">ExampleInterfacesTest</span><span class="p">.</span><span class="n">kt</span><span class="p">:</span><span class="m">30</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">E</span><span class="p">.</span><span class="n">g</span><span class="p">.</span> <span class="n">thenReturn</span><span class="p">()</span> <span class="n">may</span> <span class="n">be</span> <span class="n">missing</span><span class="p">.</span>
+</span><span class='line'><span class="n">Examples</span> <span class="n">of</span> <span class="n">correct</span> <span class="n">stubbing</span><span class="p">:</span>
+</span><span class='line'>    <span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">.</span><span class="n">isOk</span><span class="p">()).</span><span class="n">thenReturn</span><span class="p">(</span><span class="k">true</span><span class="p">);</span>
+</span><span class='line'>    <span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">.</span><span class="n">isOk</span><span class="p">()).</span><span class="n">thenThrow</span><span class="p">(</span><span class="n">exception</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">doThrow</span><span class="p">(</span><span class="n">exception</span><span class="p">).</span><span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">).</span><span class="n">someVoidMethod</span><span class="p">();</span>
+</span><span class='line'><span class="n">Hints</span><span class="p">:</span>
+</span><span class='line'> <span class="m">1.</span> <span class="n">missing</span> <span class="n">thenReturn</span><span class="p">()</span>
+</span><span class='line'> <span class="m">2.</span> <span class="n">you</span> <span class="n">are</span> <span class="n">trying</span> <span class="n">to</span> <span class="n">stub</span> <span class="n">a</span> <span class="k">final</span> <span class="n">method</span><span class="p">,</span> <span class="n">which</span> <span class="k">is</span> <span class="n">not</span> <span class="n">supported</span>
+</span><span class='line'> <span class="m">3</span><span class="p">:</span> <span class="n">you</span> <span class="n">are</span> <span class="n">stubbing</span> <span class="n">the</span> <span class="n">behaviour</span> <span class="n">of</span> <span class="n">another</span> <span class="n">mock</span> <span class="n">inside</span> <span class="n">before</span> <span class="err">&#39;</span><span class="n">thenReturn</span><span class="err">&#39;</span> <span class="n">instruction</span> <span class="k">is</span> <span class="n">completed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a very good exception message. It gives you some common examples of what you might have done wrong, and how to fix them. However, our code doesn&#8217;t match any of the examples.</p>
+
+
+		
+		<a href="/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests/" class="more-link">Read on &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2019-04-07T13:05:00-07:00" pubdate data-updated="true">Apr 7<span>th</span>, 2019</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/java/'>java</a>, <a class='category' href='/blog/categories/kotlin/'>kotlin</a>, <a class='category' href='/blog/categories/mockito/'>mockito</a>
+
+
+</div>
+	
+</div>
+</article>
 
 
     <article class="post">
@@ -115,7 +197,7 @@
   
 
 
-<time datetime="2017-10-09T14:42:00-04:00" pubdate data-updated="true">Oct 9<span>th</span>, 2017</time></div>
+<time datetime="2017-10-09T14:42:00-07:00" pubdate data-updated="true">Oct 9<span>th</span>, 2017</time></div>
 	<div class="tags">
 
 
@@ -159,7 +241,7 @@
   
 
 
-<time datetime="2017-01-24T21:27:00-05:00" pubdate data-updated="true">Jan 24<span>th</span>, 2017</time></div>
+<time datetime="2017-01-24T21:27:00-08:00" pubdate data-updated="true">Jan 24<span>th</span>, 2017</time></div>
 	<div class="tags">
 
 
@@ -203,7 +285,7 @@
   
 
 
-<time datetime="2016-04-26T14:55:00-04:00" pubdate data-updated="true">Apr 26<span>th</span>, 2016</time></div>
+<time datetime="2016-04-26T14:55:00-07:00" pubdate data-updated="true">Apr 26<span>th</span>, 2016</time></div>
 	<div class="tags">
 
 
@@ -253,7 +335,7 @@
   
 
 
-<time datetime="2016-04-21T18:33:00-04:00" pubdate data-updated="true">Apr 21<span>st</span>, 2016</time></div>
+<time datetime="2016-04-21T18:33:00-07:00" pubdate data-updated="true">Apr 21<span>st</span>, 2016</time></div>
 	<div class="tags">
 
 
@@ -295,7 +377,7 @@
   
 
 
-<time datetime="2015-08-30T13:21:00-04:00" pubdate data-updated="true">Aug 30<span>th</span>, 2015</time></div>
+<time datetime="2015-08-30T13:21:00-07:00" pubdate data-updated="true">Aug 30<span>th</span>, 2015</time></div>
 	<div class="tags">
 
 
@@ -339,7 +421,7 @@
   
 
 
-<time datetime="2014-02-20T21:25:00-05:00" pubdate data-updated="true">Feb 20<span>th</span>, 2014</time></div>
+<time datetime="2014-02-20T21:25:00-08:00" pubdate data-updated="true">Feb 20<span>th</span>, 2014</time></div>
 	<div class="tags">
 
 
@@ -355,16 +437,28 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/02/11/20-things-week-20/">
+		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/">
 		
-			20 Things, Week 20</a>
+			Broken JSONObject creation from a UTF-8 input String</a>
 	</h2>
 	<div class="entry-content">
-		<p>Week 20 of my <a href="../../../../2013/09/23/20-things-in-20-weeks/">20 Things in 20 Weeks</a> project. I&#8217;ve finally made it. So, how did I do?</p>
+		<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
+
+<p>Faced this issue, again, at work today. We have a build system with build variants for different customers. To add a new customer, we just create a new folder, add the images and add a JSON config file to suit the new customers settings. We read from that file and into a JSON string (and then into a JSON object) something like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>InputStream inStream = context.getResources().openRawResource(R.raw.local_config);
+</span><span class='line'>String json = IOUtils.toString(inStream);
+</span><span class='line'>JSONObject jsonObject = new JSONObject(json);</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Sometimes, new customers speak a language other than English, and we have to save non-ASCII characters. In this case, the file gets saved as UTF-8. Testing this isn&#8217;t a problem on my devices (Galaxy S2/Nexus 7) - but my tester has twice come back to me now and said that it doesn&#8217;t work on our 2.3 device.</p>
 
 
 		
-		<a href="/blog/2014/02/11/20-things-week-20/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -381,11 +475,11 @@
   
 
 
-<time datetime="2014-02-11T19:12:00-05:00" pubdate data-updated="true">Feb 11<span>th</span>, 2014</time></div>
+<time datetime="2013-12-17T06:04:00-08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/java/'>java</a>, <a class='category' href='/blog/categories/text-encoding/'>text-encoding</a>
 
 
 </div>
@@ -397,15 +491,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/02/03/20-things-week-19/">
+		<a href="/blog/2013/11/25/getting-started-with-volley-for-android/">
 		
-			20 Things, Week 19</a>
+			Getting started with Volley for Android</a>
 	</h2>
 	<div class="entry-content">
-		<p>Broke my Github streak this week, at 31 days - in fact, I didn&#8217;t get any programming done this week. My partner and I left Auckland on Wednesday afternoon and didn&#8217;t arrive home until late Sunday evening. We travelled around the Coromandel peninsula and spent time climbing mountains, visiting beaches, doing touristy things - and we got engaged! I&#8217;d say that that&#8217;s a pretty good excuse for missing a week.</p>
+		<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
+
 
 		
-		
+		<a href="/blog/2013/11/25/getting-started-with-volley-for-android/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -422,11 +517,11 @@
   
 
 
-<time datetime="2014-02-03T19:09:00-05:00" pubdate data-updated="true">Feb 3<span>rd</span>, 2014</time></div>
+<time datetime="2013-11-25T17:55:00-08:00" pubdate data-updated="true">Nov 25<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/volley/'>volley</a>
 
 
 </div>
@@ -438,16 +533,21 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/01/27/20-things-week-18/">
+		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">
 		
-			20 Things, Week 18</a>
+			Handling OutOfMemoryError with large bitmaps on older Android devices</a>
 	</h2>
 	<div class="entry-content">
-		<p><a href="/blog/2014/01/20/20-things-week-17/">Last week</a> I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver script</a> in Python. That was fun and all, but as my girlfriend pointed out - it&#8217;s not really usable for, er, well, most people. So this week I decided to make it a bit more versatile and build it into a service, with a website to go with it. It&#8217;s currently <a href="https://github.com/adamsp/sudoku-solver-gae">up on Github</a> and once I&#8217;ve added some polish to the website (heh, it&#8217;s pretty awful right now) I&#8217;ll get it up on App Engine.</p>
+		<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
+
+<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
+
+
+<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
 
 
 		
-		<a href="/blog/2014/01/27/20-things-week-18/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -464,58 +564,11 @@
   
 
 
-<time datetime="2014-01-27T17:36:00-05:00" pubdate data-updated="true">Jan 27<span>th</span>, 2014</time></div>
+<time datetime="2013-11-10T12:42:00-08:00" pubdate data-updated="true">Nov 10<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2014/01/20/20-things-week-17/">
-		
-			20 Things, Week 17</a>
-	</h2>
-	<div class="entry-content">
-		<p>This week I finally got around to doing something I&#8217;ve wanted to do for a while; I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku Solver in Python</a>.</p>
-
-<p>Unfortunately, it doesn&#8217;t work. At all. In fact, the more I look into it, the worse I fear it is. I&#8217;ve attempted this before, but I struck a minor obstacle with some Python syntax and did something else instead; this time, I&#8217;ve got the entire algorithm worked out and developed. There&#8217;s just some fairly significant logic bug(s) that&#8217;re causing problems. Re-reading the code, there&#8217;s also quite a bit of that which could do with a rewrite.</p>
-
-<p>No matter! I&#8217;m pretty happy I got the majority of the work done, and I&#8217;ll keep working on it - a bit of refactoring should hopefully make the logical errors a bit more obvious.</p>
-
-<p><strong>Edit (Jan 21 2014):</strong> <a href="https://github.com/adamsp/sudoku-solver/commit/25ab39bbd69b57be2626876d447ea7a6eceb5797">Fixed</a>.</p>
-
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-20T20:06:00-05:00" pubdate data-updated="true">Jan 20<span>th</span>, 2014</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>
 
 
 </div>
@@ -530,7 +583,7 @@
     
     <div class="center"><a href="/blog/archives">Blog Archives</a></div>
 </nav></div>
-	<footer id="footer" class="inner">Copyright &copy; 2017
+	<footer id="footer" class="inner">Copyright &copy; 2019
 
     Adam
 

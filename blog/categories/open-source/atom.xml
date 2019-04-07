@@ -4,7 +4,7 @@
   <title><![CDATA[Category: open-source | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/open-source/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration/"/>
-    <updated>2014-02-20T21:25:00-05:00</updated>
+    <updated>2014-02-20T21:25:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration</id>
     <content type="html"><![CDATA[<p>Ever used a <a href="https://developer.android.com/reference/android/support/v4/app/FragmentStatePagerAdapter.html"><code>FragmentStatePagerAdapter</code></a>? We're using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress to the next page once they've completed the current one. We control this by manipulating the stack of pages and notifying the adapter that the data has changed when a new page is available.</p>
 
@@ -300,7 +300,7 @@ public String getTag(int position) {</p>
   <entry>
     <title type="html"><![CDATA[Android Open Source licenses page]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/09/24/android-open-source-licenses-page/"/>
-    <updated>2013-09-24T20:49:00-04:00</updated>
+    <updated>2013-09-24T20:49:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/09/24/android-open-source-licenses-page</id>
     <content type="html"><![CDATA[<p>Ever used an open source library in your Android app? If you have, then you <a href="http://www.tldrlegal.com/browse">probably</a> should have included a page with the license details for that library. If you did, great! You probably had the same question I did recently; how should you do that?</p>
 
@@ -319,7 +319,8 @@ public String getTag(int position) {</p>
 
 <p>I revisited these issues at work recently when I was tasked with adding the licenses page to our app. After some time looking around online, I couldn't really find any suggestions as to how this page should behave, how it should look, or how to display licenses for multiple libraries. The only thing I found was <a href="http://stackoverflow.com/questions/11300552/license-screen-about-phone-legal-information-open-licenses-screen">this Stack Overflow question</a>, but that was enough of a lead to set me on the right path. I checked out some of the other Google apps - see the Play Music and Gmail apps licenses pages below. This is simply an HTML page displayed in a DialogFragment. This is more like it!</p>
 
-<p><a href="/images/android-licenses-page/play_music_licenses.png"><img src="/images/android-licenses-page/play_music_licenses.png" width="240" height="400" title="Play Music Licenses" ></a><a href="/images/android-licenses-page/gmail_licenses.png"><img src="/images/android-licenses-page/gmail_licenses.png" width="240" height="400" title="Gmail Licenses" ></a></p>
+<p><a href="/images/android-licenses-page/play_music_licenses.png"><img src="/images/android-licenses-page/play_music_licenses.png" width="240" height="400" title="Play Music Licenses" ></a>
+<a href="/images/android-licenses-page/gmail_licenses.png"><img src="/images/android-licenses-page/gmail_licenses.png" width="240" height="400" title="Gmail Licenses" ></a></p>
 
 <p>This answers the questions of how to display things nicely (including the full license text), how to handle multiple libraries with the same license, how to display any copyright notice, and how to link to any modified source code, as required in the <a href="http://opensource.org/licenses/gpl-2.0.php">GPL-2.0</a> license, for example. It should also be simple enough to set up to automatically construct this page (or a similar one) in your build scripts - including any custom text you may want to add, as I've done above for my original attempt on the Wookmark app.</p>
 

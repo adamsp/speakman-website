@@ -4,7 +4,7 @@
   <title><![CDATA[Category: windows | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/windows/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Tensorflow in Windows Bash]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash/"/>
-    <updated>2017-01-24T21:27:00-05:00</updated>
+    <updated>2017-01-24T21:27:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash</id>
     <content type="html"><![CDATA[<p>My first job out of university was at a startup doing natural language processing (NLP). Recently I've been rekindling my interest in machine learning, and have been playing with the <a href="https://www.tensorflow.org/">Tensorflow</a> library from Google. I work on a Mac, but at home I'm switching between a Mac and a PC - and ideally I'd like things to just work on whatever machine I'm on. The Tensorflow <a href="https://www.tensorflow.org/get_started/os_setup">setup guide</a> says it requires Python 3.5 for Windows, but I'm using Python 2.7 on my Mac and would like to be able to use files across platforms.</p>
 

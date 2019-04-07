@@ -4,7 +4,7 @@
   <title><![CDATA[Category: network | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/network/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/"/>
-    <updated>2016-04-26T14:55:00-04:00</updated>
+    <updated>2016-04-26T14:55:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android</id>
     <content type="html"><![CDATA[<p>In the process of rebuilding <a href="https://github.com/adamsp/wsnz-android">What's Shaking, NZ?</a>, I needed to implement a periodic network request (literally polling an API). I wanted to use the new <a href="https://developer.android.com/reference/android/app/job/JobScheduler.html">Job Scheduler</a> API, but unfortunately, this is only available on API 21 and above. Luckily we can get similar functionality by using <a href="https://developers.google.com/cloud-messaging/network-manager">GCM Network Manager</a>, as <a href="http://stackoverflow.com/q/25203254/1217087">suggested on StackOverflow</a>. Note that the GCM Network Manager actually uses Job Scheduler behind the scenes in API 21+.</p>
 

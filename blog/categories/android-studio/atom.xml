@@ -4,7 +4,7 @@
   <title><![CDATA[Category: android-studio | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/android-studio/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Adding Google Play Services to an Android Studio project]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/"/>
-    <updated>2013-06-23T10:55:00-04:00</updated>
+    <updated>2013-06-23T10:55:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project</id>
     <content type="html"><![CDATA[<p>Adding a support library to Android Studio is a bit different to how it's done in Eclipse. Where you'd add a 'project' in Eclipse, in Studio you add a 'Module' (which is a sub-project of your overall application - similar to Projects in a Solution, if you've done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.</p>
 

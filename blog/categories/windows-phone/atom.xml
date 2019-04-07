@@ -4,7 +4,7 @@
   <title><![CDATA[Category: windows-phone | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/windows-phone/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Converting WP7 Maps to WP8]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8/"/>
-    <updated>2012-12-08T11:07:00-05:00</updated>
+    <updated>2012-12-08T11:07:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8</id>
     <content type="html"><![CDATA[<p>After <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207030.aspx">converting</a> a Windows Phone 7 application (<a href="http://www.whatsshaking.co.nz">What's Shaking, NZ?</a>) to Windows Phone 8, I noticed a few deprecation warnings around the Maps SDK. Converting the code to use the WP8 Maps SDK instead was fairly straightforward, but there were a few gotchas which I've covered in this post.</p>
 
@@ -134,7 +134,7 @@ private void QuakeMap_Loaded(object sender, RoutedEventArgs e){    Microsoft.Pho
   <entry>
     <title type="html"><![CDATA[Localizing a Windows Phone (7) application]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application/"/>
-    <updated>2012-11-20T08:49:00-05:00</updated>
+    <updated>2012-11-20T08:49:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application</id>
     <content type="html"><![CDATA[<p>I've been trying to clean up the What's Shaking, NZ? for Windows Phone 7 <a href="https://github.com/adamsp/wsnz-windowsphone">codebase</a> recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I'll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.</p>
 

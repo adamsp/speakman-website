@@ -7,7 +7,7 @@
 	<meta name="author" content="Adam">
 
 	
-	<meta name="description" content=" I had my first open-source pull request merged this week, into Dogr.io. Read on &rarr; Jan 14th, 2014 20-things-20-weeks ">
+	<meta name="description" content="We had a customer at work recently who had a special requirement around multiple currency support in our Android app. They have cinema sites in &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -53,8 +53,6 @@
 	<div class="social">
 		
 		
-		<a class="google" href="https://plus.google.com/+AdamSpeakman?rel=author" title="Google+">Google+</a>
-		
 		
 		<a class="twitter" href="http://twitter.com/adamsnz" title="Twitter">Twitter</a>
 		
@@ -87,18 +85,18 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/01/14/20-things-week-16/">
+		<a href="/blog/2013/10/21/android-currency-localisation-hell/">
 		
-			20 Things, Week 16</a>
+			Android Currency Localisation Hell</a>
 	</h2>
 	<div class="entry-content">
-		<p>I had my first open-source <a href="https://github.com/codazzo/dogr/pull/2">pull request merged</a> this week, into <a href="http://dogr.io">Dogr.io</a>.</p>
+		<p>We had a customer at work recently who had a special requirement around multiple currency support in our Android app. They have cinema sites in multiple countries, and they want customers to see the correct currency symbol when viewing sessions for a site. Up until now, the app has only ever had to deal with single currencies on a per-customer (and hence per-build) basis.</p>
 
-<p><a href="/images/20-things/week_16.jpeg"><img src="/images/20-things/week_16.jpeg"></a></p>
+<p>While implementing this multiple currency support, I came across something of a problem - the Android Currency code doesn&#8217;t behave quite as you&#8217;d hope, and is inconsistent across versions. Sometimes you get a currency symbol where you&#8217;re supposed to, sometimes you don&#8217;t - and sometimes the symbol is a slightly different symbol in one locale to that which is in another (￥, I&#8217;m looking at you). I&#8217;ve now got a set of <a href="https://github.com/adamsp/CurrencyFormattingDemo">test cases</a> which do a fair job of explaining the issue, as well as the solution we came up with which <em>mostly</em> works.</p>
 
 
 		
-		<a href="/blog/2014/01/14/20-things-week-16/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2013/10/21/android-currency-localisation-hell/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -115,11 +113,11 @@
   
 
 
-<time datetime="2014-01-14T06:44:00-05:00" pubdate data-updated="true">Jan 14<span>th</span>, 2014</time></div>
+<time datetime="2013-10-21T17:45:00-07:00" pubdate data-updated="true">Oct 21<span>st</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>
 
 
 </div>
@@ -131,27 +129,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/01/06/20-things-week-15/">
+		<a href="/blog/2013/09/24/android-open-source-licenses-page/">
 		
-			20 Things, Week 15</a>
+			Android Open Source licenses page</a>
 	</h2>
 	<div class="entry-content">
-		<p>I checked in some code every day this week. That being said, I don&#8217;t really have a &#8216;Thing&#8217; that I&#8217;ve done. Turns out that I&#8217;m running out of ideas for small, week-long projects. My plan to do some small things and even a bigger project over my 2 week break didn&#8217;t work out so well - Christmas takes up a <em>lot</em> of time, and there was plenty of other things to do in my time off, too.</p>
+		<p>Ever used an open source library in your Android app? If you have, then you <a href="http://www.tldrlegal.com/browse">probably</a> should have included a page with the license details for that library. If you did, great! You probably had the same question I did recently; how should you do that?</p>
 
-<p>So while I haven&#8217;t done any one thing worthy of note, some of the stuff I <em>have</em> done (these are mostly quite trivial):</p>
-
-<ul>
-<li>Implemented <a href="https://github.com/chrisbanes/ActionBar-PullToRefresh">PullToRefresh</a> library</li>
-<li>Implemented the <a href="https://github.com/keyboardsurfer/Crouton">Crouton</a> library for toasts</li>
-<li>Decided that loading 1000+ items with ORMLite to back a <code>ListView</code> was <em>not</em> a good idea and actually got around to writing the plumbing code to use a <code>Cursor</code></li>
-<li>Added a check for &#8216;last checked date&#8217; so we now query for the smallest number of quakes</li>
-</ul>
-
-
-<p><a href="/images/20-things/week_15.PNG"><img class="bottom" src="/images/20-things/week_15.PNG"></a></p>
 
 		
-		
+		<a href="/blog/2013/09/24/android-open-source-licenses-page/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -168,11 +155,11 @@
   
 
 
-<time datetime="2014-01-06T18:06:00-05:00" pubdate data-updated="true">Jan 6<span>th</span>, 2014</time></div>
+<time datetime="2013-09-24T20:49:00-07:00" pubdate data-updated="true">Sep 24<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/open-source/'>open-source</a>
 
 
 </div>
@@ -184,16 +171,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2014/01/01/20-things-weeks-13-and-14/">
+		<a href="/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/">
 		
-			20 Things, Weeks 13 and 14</a>
+			Adding Google Play Services to an Android Studio project</a>
 	</h2>
 	<div class="entry-content">
-		<p>You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, 20 Weeks project. I could make excuses about it being Christmas, and being super busy, but that&#8217;d be a lie. I was probably playing <a href="http://us.battle.net/hearthstone/en/">Hearthstone</a>.</p>
+		<p>Adding a support library to Android Studio is a bit different to how it&#8217;s done in Eclipse. Where you&#8217;d add a &#8216;project&#8217; in Eclipse, in Studio you add a &#8216;Module&#8217; (which is a sub-project of your overall application - similar to Projects in a Solution, if you&#8217;ve done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.</p>
 
 
 		
-		<a href="/blog/2014/01/01/20-things-weeks-13-and-14/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -210,11 +197,11 @@
   
 
 
-<time datetime="2014-01-01T11:49:00-05:00" pubdate data-updated="true">Jan 1<span>st</span>, 2014</time></div>
+<time datetime="2013-06-23T10:55:00-07:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/android-studio/'>android-studio</a>, <a class='category' href='/blog/categories/google-play/'>google-play</a>
 
 
 </div>
@@ -226,17 +213,18 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2013/12/17/20-things-week-12/">
+		<a href="/blog/2013/02/28/reflections-on-finishing-an-android-app/">
 		
-			20 Things Week 12</a>
+			Reflections on finishing an Android app</a>
 	</h2>
 	<div class="entry-content">
-		<p>Actually managed to get some code written this week, though it&#8217;s still pretty rough - I&#8217;ve got a basic widget working for What&#8217;s Shaking, NZ? for Android. Exciting stuff; that&#8217;ll be polished up and good to go next week. It was actually really easy to do, as I can update it directly from my existing background service (which polls the NZ Geonet API).</p>
+		<p>A few days ago I finally finished the application I&#8217;ve been working on in my spare moments over the last month or two. It&#8217;s called <a href="https://github.com/adamsp/wookmark">Wookmark Viewer</a> and it&#8217;s a simple little app that lets you browse the latest images saved on <a href="http://www.wookmark.com">Wookmark.com</a> (Wookmark is an &#8216;image bookmarking&#8217; site, so there&#8217;s all sorts of images from all over the web that get saved there). This was an interesting project for me, as I got to use a few different open source libraries (including one I ended up almost totally rewriting), switched IDE from Eclipse to IntelliJ, and had to figure out some new Android features I hadn&#8217;t used before.</p>
 
-<p>Also wrote a <a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string">blog post on a common Java encoding issue</a> - basically, when you&#8217;ve got a UTF-8 file with a Byte Order Mark at the start, things that parse that can freak out if they&#8217;re not expecting it. Easiest way to avoid it is to get rid of the BOM altogether.</p>
+<p>This post-mortem picks apart what I enjoyed building, what caused me troubles, and what needs changing - the app is far from perfect.</p>
+
 
 		
-		
+		<a href="/blog/2013/02/28/reflections-on-finishing-an-android-app/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -253,11 +241,11 @@
   
 
 
-<time datetime="2013-12-17T06:11:00-05:00" pubdate data-updated="true">Dec 17<span>th</span>, 2013</time></div>
+<time datetime="2013-02-28T22:31:00-08:00" pubdate data-updated="true">Feb 28<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>
 
 
 </div>
@@ -269,28 +257,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/">
+		<a href="/blog/2012/12/08/converting-wp7-maps-to-wp8/">
 		
-			Broken JSONObject creation from a UTF-8 input String</a>
+			Converting WP7 Maps to WP8</a>
 	</h2>
 	<div class="entry-content">
-		<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
-
-<p>Faced this issue, again, at work today. We have a build system with build variants for different customers. To add a new customer, we just create a new folder, add the images and add a JSON config file to suit the new customers settings. We read from that file and into a JSON string (and then into a JSON object) something like this:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>InputStream inStream = context.getResources().openRawResource(R.raw.local_config);
-</span><span class='line'>String json = IOUtils.toString(inStream);
-</span><span class='line'>JSONObject jsonObject = new JSONObject(json);</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Sometimes, new customers speak a language other than English, and we have to save non-ASCII characters. In this case, the file gets saved as UTF-8. Testing this isn&#8217;t a problem on my devices (Galaxy S2/Nexus 7) - but my tester has twice come back to me now and said that it doesn&#8217;t work on our 2.3 device.</p>
+		<p>After <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207030.aspx">converting</a> a Windows Phone 7 application (<a href="http://www.whatsshaking.co.nz">What&#8217;s Shaking, NZ?</a>) to Windows Phone 8, I noticed a few deprecation warnings around the Maps SDK. Converting the code to use the WP8 Maps SDK instead was fairly straightforward, but there were a few gotchas which I&#8217;ve covered in this post.</p>
 
 
 		
-		<a href="/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2012/12/08/converting-wp7-maps-to-wp8/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -307,11 +283,11 @@
   
 
 
-<time datetime="2013-12-17T06:04:00-05:00" pubdate data-updated="true">Dec 17<span>th</span>, 2013</time></div>
+<time datetime="2012-12-08T11:07:00-08:00" pubdate data-updated="true">Dec 8<span>th</span>, 2012</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/java/'>java</a>, <a class='category' href='/blog/categories/text-encoding/'>text-encoding</a>
+	<a class='category' href='/blog/categories/windows-phone/'>windows-phone</a>
 
 
 </div>
@@ -323,19 +299,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2013/12/09/20-things-week-11/">
+		<a href="/blog/2012/11/20/localizing-a-windows-phone-application/">
 		
-			20 Things, Week 11</a>
+			Localizing a Windows Phone (7) application</a>
 	</h2>
 	<div class="entry-content">
-		<p>Once again, nothing to present this week. I&#8217;ve continued looking into this bug in KitKat that I mentioned last week; I&#8217;ve spent most of my time trying to replicate it in a minimal amount of code. This included exploring the <a href="https://github.com/square/okhttp">OkHttp tests</a> (which was&#8230; an interesting exercise), and modifying the sample code provided for the <a href="https://code.google.com/p/android/issues/detail?id=38817">original bug</a> whose fix I suspect introduced this problem.</p>
+		<p>I&#8217;ve been trying to clean up the What&#8217;s Shaking, NZ? for Windows Phone 7 <a href="https://github.com/adamsp/wsnz-windowsphone">codebase</a> recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I&#8217;ll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.</p>
 
-<p>Despite all this, I&#8217;ve still been unable to reproduce it except via a Twitter stream (which requires a bit more setup than a chunked encoding HTTP connection without encoding - and so I&#8217;ve been avoiding this in the minimal time I&#8217;ve had to try this).</p>
-
-<p>Additionally, I lost a bit of motivation part way through the week with <a href="http://www.xda-developers.com/android/android-4-4-1-update-for-the-nexus-5-now-live/">news that 4.4.1 is just around the corner</a> - if the bug is fixed in that release, I won&#8217;t bother working on it anymore! Unfortunately, as of this writing, there&#8217;s still <a href="https://developers.google.com/android/nexus/images">no Nexus 7 2012 image available</a>.</p>
 
 		
-		
+		<a href="/blog/2012/11/20/localizing-a-windows-phone-application/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -352,11 +325,11 @@
   
 
 
-<time datetime="2013-12-09T21:03:00-05:00" pubdate data-updated="true">Dec 9<span>th</span>, 2013</time></div>
+<time datetime="2012-11-20T08:49:00-08:00" pubdate data-updated="true">Nov 20<span>th</span>, 2012</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/windows-phone/'>windows-phone</a>
 
 
 </div>
@@ -368,16 +341,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2013/12/02/20-things-week-10/">
+		<a href="/blog/2012/10/28/google-maps-zoom-levels-on-android/">
 		
-			20 Things, Week 10</a>
+			Google Maps zoom levels on Android</a>
 	</h2>
 	<div class="entry-content">
-		<p>So, the halfway point of my wee experiment. 10 weeks out of 20. The most obvious question at this stage is have I created 10 Things? Nope, but that&#8217;s okay.</p>
+		<p>I had an interesting problem today where I needed to scale the default zoom for the map view for my <a href="https://play.google.com/store/apps/details?id=speakman.whatsshakingnz">Android app</a>, depending on the screen size. I&#8217;d previously hardcoded it to a zoom level of 6. This worked nicely on my testing device (a Nexus One) and looked OK (but not great) on a Galaxy S3 - but I saw it last night on a Nexus 7 and it looked ridiculous. My desire was to have the map view show the whole of New Zealand, filling up as much of the screen as possible. On the Nexus 7, the country was tiny.</p>
 
 
 		
-		<a href="/blog/2013/12/02/20-things-week-10/" class="more-link">Read on &rarr;</a>
+		<a href="/blog/2012/10/28/google-maps-zoom-levels-on-android/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -394,11 +367,11 @@
   
 
 
-<time datetime="2013-12-02T17:56:00-05:00" pubdate data-updated="true">Dec 2<span>nd</span>, 2013</time></div>
+<time datetime="2012-10-28T12:40:00-07:00" pubdate data-updated="true">Oct 28<span>th</span>, 2012</time></div>
 	<div class="tags">
 
 
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
+	<a class='category' href='/blog/categories/android/'>android</a>
 
 
 </div>
@@ -410,17 +383,16 @@
     <article class="post">
 	<h2 class="title">
 		
-		<a href="/blog/2013/11/25/20-things-week-9/">
+		<a href="/blog/2012/09/11/setting-up-octopress-on-github-pages/">
 		
-			20 Things, Week 9</a>
+			Setting up Octopress on Github Pages</a>
 	</h2>
 	<div class="entry-content">
-		<p>So this week, like most of the Things I&#8217;ve done for this project, I wrote a blog post. Shocking.</p>
+		<p>There&#8217;s a lot of good information out there already on setting up Octopress on Github. The <a href="http://octopress.org/docs/deploying/github/">Octopress documentation</a> covers the subject in depth, as do assorted blog posts. However, perhaps it&#8217;s because I was drinking while doing it, or perhaps it was because I missed something while reading the guides, or my poor mental model of how things were supposed to work, or even that it was late at night, but I had a lot of trouble setting up <a href="http://www.whatsshaking.co.nz">What&#8217;s Shaking, NZ?</a> on Github Pages.</p>
 
-<p><a href="/blog/2013/11/25/getting-started-with-volley-for-android/">This post</a> was a fairly hefty one, covering the new <a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> library for Android. If you&#8217;re performing any network activity in an Android app, I&#8217;d recommend taking a look at it. It helps to avoid a whole skew of problems you may not even know exist, and has a lot of useful features. It takes a bit of reading to get set up, but once you know what you&#8217;re doing it&#8217;s great.</p>
 
 		
-		
+		<a href="/blog/2012/09/11/setting-up-octopress-on-github-pages/" class="more-link">Read on &rarr;</a>
 	</div>
 
 
@@ -437,99 +409,8 @@
   
 
 
-<time datetime="2013-11-25T20:01:00-05:00" pubdate data-updated="true">Nov 25<span>th</span>, 2013</time></div>
+<time datetime="2012-09-11T20:22:00-07:00" pubdate data-updated="true">Sep 11<span>th</span>, 2012</time></div>
 	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/11/25/getting-started-with-volley-for-android/">
-		
-			Getting started with Volley for Android</a>
-	</h2>
-	<div class="entry-content">
-		<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
-
-
-		
-		<a href="/blog/2013/11/25/getting-started-with-volley-for-android/" class="more-link">Read on &rarr;</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-11-25T17:55:00-05:00" pubdate data-updated="true">Nov 25<span>th</span>, 2013</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>, <a class='category' href='/blog/categories/android/'>android</a>, <a class='category' href='/blog/categories/volley/'>volley</a>
-
-
-</div>
-	
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/blog/2013/11/18/20-things-week-8/">
-		
-			20 Things, Week 8</a>
-	</h2>
-	<div class="entry-content">
-		<p>We had a crazy week at work this week; we’re doing a rewrite of our app, and we had an internal stakeholder demo. Was doing some long hours.</p>
-
-<p>This weekend I went to <a href="http://devmob.co.nz">devmob</a> in Dunedin. It’s an unconference/barcamp that’s held here for mobile devs from all around the country. Met lots of interesting people and had a great time - but there was no time to write code.</p>
-
-<p>So, this week, I’ve done nothing towards my 20 Things. Unfortunate, but I knew this would happen. Next week I’ll definitely have something out!</p>
-
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-11-18T20:24:00-05:00" pubdate data-updated="true">Nov 18<span>th</span>, 2013</time></div>
-	<div class="tags">
-
-
-	<a class='category' href='/blog/categories/20-things-20-weeks/'>20-things-20-weeks</a>
-
 
 </div>
 	
@@ -541,11 +422,9 @@
         <a href="/" class="prev">Prev</a>
     
     
-        <a href="/blog/page/3/" class="next">Next</a>
-    
     <div class="center"><a href="/blog/archives">Blog Archives</a></div>
 </nav></div>
-	<footer id="footer" class="inner">Copyright &copy; 2017
+	<footer id="footer" class="inner">Copyright &copy; 2019
 
     Adam
 

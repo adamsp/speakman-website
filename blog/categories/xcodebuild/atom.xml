@@ -4,7 +4,7 @@
   <title><![CDATA[Category: xcodebuild | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/xcodebuild/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Automating iOS build numbers]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers/"/>
-    <updated>2015-08-30T13:21:00-04:00</updated>
+    <updated>2015-08-30T13:21:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers</id>
     <content type="html"><![CDATA[<p>I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At <a href="http://gobridgit.com">Bridgit</a> we're big fans of automation, so I went about finding a way to avoid this human error and let the machines do the work for me.</p>
 

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: volley | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/volley/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
-    <updated>2013-11-25T17:55:00-05:00</updated>
+    <updated>2013-11-25T17:55:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
     <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
 

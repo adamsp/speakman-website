@@ -4,7 +4,7 @@
   <title><![CDATA[Category: text-encoding | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/text-encoding/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Broken JSONObject creation from a UTF-8 input String]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/"/>
-    <updated>2013-12-17T06:04:00-05:00</updated>
+    <updated>2013-12-17T06:04:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string</id>
     <content type="html"><![CDATA[<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
 

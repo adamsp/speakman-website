@@ -4,7 +4,7 @@
   <title><![CDATA[Category: backup | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/backup/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/"/>
-    <updated>2016-04-21T18:33:00-04:00</updated>
+    <updated>2016-04-21T18:33:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android</id>
     <content type="html"><![CDATA[<p>Back in November, I had just started using <a href="https://realm.io/">Realm</a> on Android and was having some troubles. I'd occasionally need to make a model change, and being early on in development I was happy to just delete the Realm and start again - in production you'd want to perform a migration so you don't lose any user data.</p>
 

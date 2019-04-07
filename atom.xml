@@ -4,7 +4,7 @@
   <title><![CDATA[Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -14,9 +14,161 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Mockito UnfinishedStubbingException in tests]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests/"/>
+    <updated>2019-04-07T13:05:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests</id>
+    <content type="html"><![CDATA[<p>Ever wonder why Mockito will occasionally give you an <code>UnfinishedStubbingException</code> even though you <em>clearly</em> finished the stubbing?</p>
+
+<p>For example, the following code will fail at runtime (<code>mockChannel</code> has been setup earlier):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">whenever</span><span class="p">(</span><span class="n">mockChannelNameProvider</span><span class="p">.</span><span class="n">nameForChannel</span><span class="p">(</span><span class="n">mockChannel</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">.</span><span class="n">thenReturn</span><span class="p">(</span><span class="n">mockChannel</span><span class="p">.</span><span class="n">id</span><span class="p">())</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With an exception like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="n">org</span><span class="p">.</span><span class="n">mockito</span><span class="p">.</span><span class="n">exceptions</span><span class="p">.</span><span class="n">misusing</span><span class="p">.</span><span class="n">UnfinishedStubbingException</span><span class="p">:</span>
+</span><span class='line'><span class="n">Unfinished</span> <span class="n">stubbing</span> <span class="n">detected</span> <span class="n">here</span><span class="p">:</span>
+</span><span class='line'><span class="p">-&gt;</span> <span class="n">at</span> <span class="n">ExampleFailingTestKotlin</span><span class="p">.</span><span class="n">setupChannelName</span><span class="p">(</span><span class="n">ExampleInterfacesTest</span><span class="p">.</span><span class="n">kt</span><span class="p">:</span><span class="m">30</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">E</span><span class="p">.</span><span class="n">g</span><span class="p">.</span> <span class="n">thenReturn</span><span class="p">()</span> <span class="n">may</span> <span class="n">be</span> <span class="n">missing</span><span class="p">.</span>
+</span><span class='line'><span class="n">Examples</span> <span class="n">of</span> <span class="n">correct</span> <span class="n">stubbing</span><span class="p">:</span>
+</span><span class='line'>    <span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">.</span><span class="n">isOk</span><span class="p">()).</span><span class="n">thenReturn</span><span class="p">(</span><span class="k">true</span><span class="p">);</span>
+</span><span class='line'>    <span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">.</span><span class="n">isOk</span><span class="p">()).</span><span class="n">thenThrow</span><span class="p">(</span><span class="n">exception</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">doThrow</span><span class="p">(</span><span class="n">exception</span><span class="p">).</span><span class="k">when</span><span class="p">(</span><span class="n">mock</span><span class="p">).</span><span class="n">someVoidMethod</span><span class="p">();</span>
+</span><span class='line'><span class="n">Hints</span><span class="p">:</span>
+</span><span class='line'> <span class="m">1.</span> <span class="n">missing</span> <span class="n">thenReturn</span><span class="p">()</span>
+</span><span class='line'> <span class="m">2.</span> <span class="n">you</span> <span class="n">are</span> <span class="n">trying</span> <span class="n">to</span> <span class="n">stub</span> <span class="n">a</span> <span class="k">final</span> <span class="n">method</span><span class="p">,</span> <span class="n">which</span> <span class="k">is</span> <span class="n">not</span> <span class="n">supported</span>
+</span><span class='line'> <span class="m">3</span><span class="p">:</span> <span class="n">you</span> <span class="n">are</span> <span class="n">stubbing</span> <span class="n">the</span> <span class="n">behaviour</span> <span class="n">of</span> <span class="n">another</span> <span class="n">mock</span> <span class="n">inside</span> <span class="n">before</span> <span class="err">&#39;</span><span class="n">thenReturn</span><span class="err">&#39;</span> <span class="n">instruction</span> <span class="k">is</span> <span class="n">completed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a very good exception message. It gives you some common examples of what you might have done wrong, and how to fix them. However, our code doesn&#8217;t match any of the examples.</p>
+
+<!-- more -->
+
+
+<p>If we look at the generated Java for this (<code>Tools &gt; Kotlin &gt; Show Kotlin Bytecode &gt; Decompile</code>), it <em>still</em> looks like it should work - we definitely finish the stubbing:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Channel</span> <span class="n">var10001</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">mockChannel</span><span class="o">;</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">var10001</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">Intrinsics</span><span class="o">.</span><span class="na">throwUninitializedPropertyAccessException</span><span class="o">(</span><span class="s">&quot;mockChannel&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">OngoingStubbing</span> <span class="n">var2</span> <span class="o">=</span> <span class="n">Mockito</span><span class="o">.</span><span class="na">when</span><span class="o">(</span><span class="n">var1</span><span class="o">.</span><span class="na">nameForChannel</span><span class="o">(</span><span class="n">var10001</span><span class="o">));</span>
+</span><span class='line'><span class="n">var10001</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">mockChannel</span><span class="o">;</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">var10001</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">Intrinsics</span><span class="o">.</span><span class="na">throwUninitializedPropertyAccessException</span><span class="o">(</span><span class="s">&quot;mockChannel&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">var2</span><span class="o">.</span><span class="na">thenReturn</span><span class="o">(</span><span class="n">var10001</span><span class="o">.</span><span class="na">id</span><span class="o">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So why do we get an <code>UnfinishedStubbingException</code>? <em>Because we&#8217;re accessing a mock before we finish the stubbing.</em></p>
+
+<p>The failure happens on this line from the decompiled Kotlin bytecode:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">var2</span><span class="o">.</span><span class="na">thenReturn</span><span class="o">(</span><span class="n">var10001</span><span class="o">.</span><span class="na">id</span><span class="o">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&#8217;s make this a little clearer by using descriptive names:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ongoingStubbing</span><span class="o">.</span><span class="na">thenReturn</span><span class="o">(</span><span class="n">mockChannel</span><span class="o">.</span><span class="na">id</span><span class="o">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can break this apart a little further:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">String</span> <span class="n">id</span> <span class="o">=</span> <span class="n">mockChannel</span><span class="o">.</span><span class="na">id</span><span class="o">();</span>
+</span><span class='line'><span class="n">ongoingStubbing</span><span class="o">.</span><span class="na">thenReturn</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So we have a reference to an <code>OngoingStubbing</code>. Internally, Mockito statically maintains a reference to a <code>MockingProgress</code>. When we access the mock (<code>mockChannel.id()</code>) after we&#8217;ve already started the stubbing, Mockito goes off to the <code>MockingProgress</code> and <a href="https://github.com/mockito/mockito/blob/49e07acc30fb486a8af773977e461cf4d1c876ec/src/main/java/org/mockito/internal/handler/MockHandlerImpl.java#L64">calls through to a <code>validateState()</code> method</a>, which does this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">validateState</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">validateMostStuff</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">//validate stubbing:</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="n">stubbingInProgress</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">Location</span> <span class="n">temp</span> <span class="o">=</span> <span class="n">stubbingInProgress</span><span class="o">;</span>
+</span><span class='line'>      <span class="n">stubbingInProgress</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>      <span class="k">throw</span> <span class="nf">unfinishedStubbing</span><span class="o">(</span><span class="n">temp</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Because a stubbing is still in progress, we get an <code>UnfinishedStubbingException</code>. 💥</p>
+
+<p>We can fix this by pulling the variable out of the mock on the line before we start the stubbing:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='kotlin'><span class='line'><span class="k">val</span> <span class="py">channelName</span> <span class="p">=</span> <span class="n">mockChannel</span><span class="p">.</span><span class="n">id</span><span class="p">()</span>
+</span><span class='line'><span class="n">whenever</span><span class="p">(</span><span class="n">mockChannelNameProvider</span><span class="p">.</span><span class="n">nameForChannel</span><span class="p">(</span><span class="n">mockChannel</span><span class="p">)).</span><span class="n">thenReturn</span><span class="p">(</span><span class="n">channelName</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Of course, make sure to comment <em>why</em> you&#8217;re doing this for the next developer who comes along and tries to simplify this by inlining the variable.</p>
+
+<p>Now that we see why it&#8217;s happening, it makes sense. Accessing a mock while setting up a different one is a bit of a code smell - they should probably be accessing some constant value. One of the best ways to prevent this situation is to use fakes not mocks for your models. Obviously, this isn&#8217;t always easy though - you might have legacy concerns that prevent this or you might need to make sure that you return the same thing from two different interfaces.</p>
+
+<p>This can be a very confusing error to debug, especially when it&#8217;s deep in some utility or setup method (where it might not even be obvious that you&#8217;re accessing something on a mock), or when you&#8217;re in the process of converting some legacy code. Next time you encounter it, consider whether you can do some refactoring to make it harder to hit.</p>
+
+<p>You can find the <a href="https://github.com/adamsp/mockito-tests">source code for this post here</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Asynchronously loading data using Googles Paging Library]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library/"/>
-    <updated>2017-10-09T14:42:00-04:00</updated>
+    <updated>2017-10-09T14:42:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library</id>
     <content type="html"><![CDATA[<p>The recently released <a href="https://developer.android.com/topic/libraries/architecture/paging.html">Paging Library</a> from Google gives you an easy way to page data into memory off of the main thread. If you want to use it with <a href="https://developer.android.com/topic/libraries/architecture/room.html">Room</a>, then the built-in support makes it trivial. However, if you&#8217;d like to page data that exists elsewhere - from the network or disk, for example - then you have to do a little extra work.</p>
 
@@ -377,7 +529,7 @@
   <entry>
     <title type="html"><![CDATA[Tensorflow in Windows Bash]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash/"/>
-    <updated>2017-01-24T21:27:00-05:00</updated>
+    <updated>2017-01-24T21:27:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2017/01/24/tensorflow-in-windows-bash</id>
     <content type="html"><![CDATA[<p>My first job out of university was at a startup doing natural language processing (NLP). Recently I&#8217;ve been rekindling my interest in machine learning, and have been playing with the <a href="https://www.tensorflow.org/">Tensorflow</a> library from Google. I work on a Mac, but at home I&#8217;m switching between a Mac and a PC - and ideally I&#8217;d like things to just work on whatever machine I&#8217;m on. The Tensorflow <a href="https://www.tensorflow.org/get_started/os_setup">setup guide</a> says it requires Python 3.5 for Windows, but I&#8217;m using Python 2.7 on my Mac and would like to be able to use files across platforms.</p>
 
@@ -461,7 +613,7 @@
   <entry>
     <title type="html"><![CDATA[Implementing GCM Network Manager for periodic network requests on Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android/"/>
-    <updated>2016-04-26T14:55:00-04:00</updated>
+    <updated>2016-04-26T14:55:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2016/04/26/implementing-gcm-network-manager-for-periodic-network-requests-on-android</id>
     <content type="html"><![CDATA[<p>In the process of rebuilding <a href="https://github.com/adamsp/wsnz-android">What&#8217;s Shaking, NZ?</a>, I needed to implement a periodic network request (literally polling an API). I wanted to use the new <a href="https://developer.android.com/reference/android/app/job/JobScheduler.html">Job Scheduler</a> API, but unfortunately, this is only available on API 21 and above. Luckily we can get similar functionality by using <a href="https://developers.google.com/cloud-messaging/network-manager">GCM Network Manager</a>, as <a href="http://stackoverflow.com/q/25203254/1217087">suggested on StackOverflow</a>. Note that the GCM Network Manager actually uses Job Scheduler behind the scenes in API 21+.</p>
 
@@ -646,7 +798,7 @@
   <entry>
     <title type="html"><![CDATA[Handling RealmMigrationNeededException on a fresh installation on Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android/"/>
-    <updated>2016-04-21T18:33:00-04:00</updated>
+    <updated>2016-04-21T18:33:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2016/04/21/handling-realmmigrationneededexception-on-a-fresh-installation-on-android</id>
     <content type="html"><![CDATA[<p>Back in November, I had just started using <a href="https://realm.io/">Realm</a> on Android and was having some troubles. I&#8217;d occasionally need to make a model change, and being early on in development I was happy to just delete the Realm and start again - in production you&#8217;d want to perform a migration so you don&#8217;t lose any user data.</p>
 
@@ -720,7 +872,7 @@
   <entry>
     <title type="html"><![CDATA[Automating iOS build numbers]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers/"/>
-    <updated>2015-08-30T13:21:00-04:00</updated>
+    <updated>2015-08-30T13:21:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2015/08/30/automating-ios-build-numbers</id>
     <content type="html"><![CDATA[<p>I recently encountered some problems where I was accidentallly duplicating build numbers for our iOS app. At <a href="http://gobridgit.com">Bridgit</a> we&#8217;re big fans of automation, so I went about finding a way to avoid this human error and let the machines do the work for me.</p>
 
@@ -863,7 +1015,7 @@
   <entry>
     <title type="html"><![CDATA[A bug in (and a fix for) the way FragmentStatePagerAdapter handles fragment restoration]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration/"/>
-    <updated>2014-02-20T21:25:00-05:00</updated>
+    <updated>2014-02-20T21:25:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2014/02/20/a-bug-in-and-a-fix-for-the-way-fragmentstatepageradapter-handles-fragment-restoration</id>
     <content type="html"><![CDATA[<p>Ever used a <a href="https://developer.android.com/reference/android/support/v4/app/FragmentStatePagerAdapter.html"><code>FragmentStatePagerAdapter</code></a>? We&#8217;re using one at work for our ticket purchasing wizard. The user enters the wizard, and can progress to the next page once they&#8217;ve completed the current one. We control this by manipulating the stack of pages and notifying the adapter that the data has changed when a new page is available.</p>
 
@@ -1180,196 +1332,9 @@
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[20 Things, Week 20]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/11/20-things-week-20/"/>
-    <updated>2014-02-11T19:12:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/02/11/20-things-week-20</id>
-    <content type="html"><![CDATA[<p>Week 20 of my <a href="../../../../2013/09/23/20-things-in-20-weeks/">20 Things in 20 Weeks</a> project. I&#8217;ve finally made it. So, how did I do?</p>
-
-<!-- more -->
-
-
-<p>First, what did I do this week just gone? Well, since I missed week 19 I needed to get 2 things done - and, well, I guess I got two, though they&#8217;re both fairly minor.</p>
-
-<p>The first Thing I did this week was write up a <a href="https://gist.github.com/adamsp/8930095">shell script</a> for generating and publishing this website, and adding, committing and pushing any new files to git, all in one command. I realised I needed this as I&#8217;ve been typing the exact same 5 commands over the last 20 weeks every time I wanted to do a new post. Now, all I do is type <code>./update.sh 20 Things Week 20</code> and it does it all for me. Sorted.</p>
-
-<p>This weeks second Thing was a side effect of a continuation of a previous Thing - I was looking into responding to Jesse on <a href="http://stackoverflow.com/q/20306498/1217087">this question</a> about the streaming issues I&#8217;m having for my Twitter Daydream, when I stumbled across another issue in OkHttp. I fixed it and sent a <a href="https://github.com/square/okhttp/pull/513">pull request</a> - it was a minor fix, but still, I think it counts!</p>
-
-<p>So with this final week out of the way, how have I done overall?</p>
-
-<p>There were a total of 4 weeks where I didn&#8217;t get any Things done, with 3 weeks where I got 2 Things done, leaving me 1 Thing short of 20. Considering the amount of time I spent chasing down the streaming bug for Android 4.4 though, I may as well consider that a Thing - which gives me my 20!</p>
-
-<p>Some of my highlights from the last 20 weeks include:</p>
-
-<ul>
-<li>the <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver</a>, I really enjoyed making that - even though I&#8217;m sure my Python is pretty awful</li>
-<li>the <a href="https://github.com/adamsp/AndroidLicensesPage">Android Open Source Licenses page</a> is now being used in the <a href="https://play.google.com/store/apps/details?id=com.rdio.android.ui">Rdio app</a>, which is pretty awesome</li>
-<li>getting engaged!</li>
-<li>achieving a 31 day commit streak on Github</li>
-</ul>
-
-
-<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_20.PNG"><img src="http://adamsp.github.com/speakman-website/images/20-things/week_20.PNG"></a></p>
-
-<p>And some of the things I&#8217;ve learned:</p>
-
-<ul>
-<li>It&#8217;s good to sit down and spend a few hours writing when you&#8217;ve solved a tricky problem; you&#8217;ll thank yourself later when you need to remember why you wrote things that way!</li>
-<li>Some of the <a href="../../../../2013/09/23/20-things-in-20-weeks/">initial projects</a> I envisaged were <em>far</em> too large for the timespan I gave myself - a project a month might&#8217;ve been more feasible. Realising how much work they were (and how little time I realistically had) put me off attempting a few of the bigger projects.</li>
-<li>If you work at doing a little bit every day, things come together reasonably quickly.</li>
-<li>Sometimes I just don&#8217;t feel like writing code, and that&#8217;s OK - you don&#8217;t have to be productive every day.</li>
-<li>The best way to learn new things continues to be jumping in and giving it a go; even if you make something that&#8217;s been done before, at least you&#8217;ll learn something new!</li>
-</ul>
-
-
-<p>Going forward, I&#8217;d like to complete a few of the projects I&#8217;ve started. What I really want to work on is my Twitter client - it&#8217;s something I&#8217;ve wanted to make for a long time, and I&#8217;ve got in mind exactly how I&#8217;d like it to work. I&#8217;d like to finally fix the bug in my Android Daydream and get it working on KitKat, as well as adding some animations to it and some extra features around viewing images. And I&#8217;d like to finish the global version of What&#8217;s Shaking, seeing as I&#8217;ve already spent a fair bit of time on it.</p>
-
-<p>Overall this has been a great experience. I&#8217;ve learned a lot about things I may never have bothered looking into. I&#8217;ve gained some great habits, both around writing blogs (it doesn&#8217;t have to be perfect, and probably no one&#8217;s going to read it except you anyway, so just write it) and around writing code (similarly, code doesn&#8217;t have to be perfect to go on Github - and if you&#8217;ve got an idea, just get started on it!). I expect there&#8217;ll be a lot more activity on here in the future, as I figure out solutions to the problems I come across, and make awesome (and not-so-awesome) new Things!</p>
-
-<p>All 20 Things, by week:</p>
-
-<ol>
-<li><a href="../../../../2013/09/24/android-open-source-licenses-page/">Android Open Source Licenses page</a> (<a href="https://github.com/adamsp/AndroidLicensesPage">Github</a>)</li>
-<li>Attempt at a multi-column list view. This never made it online, and recently <a href="https://github.com/etsy/AndroidStaggeredGrid">Etsy released a <em>much</em> better one</a>.</li>
-<li>Parsing <a href="https://gist.github.com/adamsp/6914482">WCF serialized DateTime JSON objects in Java</a>, started Feather Twitter client (2 things this week!)</li>
-<li>Android Currency Localisation <a href="../../../../2013/10/21/android-currency-localisation-hell/">blog post</a> + <a href="https://github.com/adamsp/CurrencyFormattingDemo">demo code</a></li>
-<li><a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Dream In Tweets Daydream</a> (<a href="https://github.com/adamsp/DreamInTweets">Github</a>)</li>
-<li>Updated blog theme, implemented working Share buttons</li>
-<li>OutOfMemoryError handling for large bitmaps on Android <a href="../../../../2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/">blog post</a></li>
-<li>&#45;</li>
-<li><a href="../../../../2013/11/25/getting-started-with-volley-for-android/">Getting started with Volley</a> blog post</li>
-<li>A lot of time spent looking into the Daydream 4.4 bug, including a detailed <a href="http://stackoverflow.com/q/20306498/1217087">post on StackOverflow</a></li>
-<li>&#45; (more looking into the 4.4 bug)</li>
-<li><a href="../../../../2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/">UTF-8 Byte-Order-Mark/JSON parsing</a> blog post</li>
-<li>Implemented a basic <a href="https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a">What&#8217;s Shaking, NZ? widget</a></li>
-<li>Finally <a href="https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485">added an Open Source licenses page</a> to What&#8217;s Shaking, NZ?, and started work on a <a href="https://github.com/adamsp/WhatsShaking">What&#8217;s Shaking global app</a> (2 things!)</li>
-<li>Assorted minor things, started Github commit streak</li>
-<li>Sent a pull request to <a href="https://github.com/codazzo/dogr/pull/2">fix spatial alignment</a> on the Dogr.io site</li>
-<li>Implemented a <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver Python script</a></li>
-<li>Took that script, and made it into a <a href="https://github.com/adamsp/sudoku-solver-gae">Sudoku solver service &amp; website</a> running on Google App Engine</li>
-<li>&#45; (on holiday, and I got engaged - does that count as a thing?)</li>
-<li>Implemented a script to <a href="https://gist.github.com/adamsp/8930095">publish website updates with one command</a>, and sent a pull request with a <a href="https://github.com/square/okhttp/pull/513">null pointer fix</a> for Square&#8217;s OkHttp (2 things!)</li>
-</ol>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 19]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/02/03/20-things-week-19/"/>
-    <updated>2014-02-03T19:09:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/02/03/20-things-week-19</id>
-    <content type="html"><![CDATA[<p>Broke my Github streak this week, at 31 days - in fact, I didn&#8217;t get any programming done this week. My partner and I left Auckland on Wednesday afternoon and didn&#8217;t arrive home until late Sunday evening. We travelled around the Coromandel peninsula and spent time climbing mountains, visiting beaches, doing touristy things - and we got engaged! I&#8217;d say that that&#8217;s a pretty good excuse for missing a week.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 18]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/27/20-things-week-18/"/>
-    <updated>2014-01-27T17:36:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/01/27/20-things-week-18</id>
-    <content type="html"><![CDATA[<p><a href="http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17/">Last week</a> I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku solver script</a> in Python. That was fun and all, but as my girlfriend pointed out - it&#8217;s not really usable for, er, well, most people. So this week I decided to make it a bit more versatile and build it into a service, with a website to go with it. It&#8217;s currently <a href="https://github.com/adamsp/sudoku-solver-gae">up on Github</a> and once I&#8217;ve added some polish to the website (heh, it&#8217;s pretty awful right now) I&#8217;ll get it up on App Engine.</p>
-
-<!-- more -->
-
-
-<p>Since this is week 18, and I&#8217;m nearly at the end of the 20 Things, 20 Weeks project, I&#8217;ve counted up the number of distinct &#8220;things&#8221; I&#8217;ve done. I&#8217;ll do a full recap at the end of the 20 Weeks, but for now, I&#8217;m at 17/18 &#8220;things&#8221;, if I count my partially-working Twitter client, and even at 18/18 if I count the time I spent working on <a href="http://stackoverflow.com/q/20306498/1217087">figuring out the KitKat Twitter streaming bug</a> (which I still haven&#8217;t solved). That&#8217;s a <strong>lot</strong> better than I thought I was doing - I thought I was 4 or 5 behind.</p>
-
-<p>Also, I&#8217;ve managed to keep that Github streak going - now at 31 days!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 17]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17/"/>
-    <updated>2014-01-20T20:06:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/01/20/20-things-week-17</id>
-    <content type="html"><![CDATA[<p>This week I finally got around to doing something I&#8217;ve wanted to do for a while; I wrote a <a href="https://github.com/adamsp/sudoku-solver">Sudoku Solver in Python</a>.</p>
-
-<p>Unfortunately, it doesn&#8217;t work. At all. In fact, the more I look into it, the worse I fear it is. I&#8217;ve attempted this before, but I struck a minor obstacle with some Python syntax and did something else instead; this time, I&#8217;ve got the entire algorithm worked out and developed. There&#8217;s just some fairly significant logic bug(s) that&#8217;re causing problems. Re-reading the code, there&#8217;s also quite a bit of that which could do with a rewrite.</p>
-
-<p>No matter! I&#8217;m pretty happy I got the majority of the work done, and I&#8217;ll keep working on it - a bit of refactoring should hopefully make the logical errors a bit more obvious.</p>
-
-<p><strong>Edit (Jan 21 2014):</strong> <a href="https://github.com/adamsp/sudoku-solver/commit/25ab39bbd69b57be2626876d447ea7a6eceb5797">Fixed</a>.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 16]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/14/20-things-week-16/"/>
-    <updated>2014-01-14T06:44:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/01/14/20-things-week-16</id>
-    <content type="html"><![CDATA[<p>I had my first open-source <a href="https://github.com/codazzo/dogr/pull/2">pull request merged</a> this week, into <a href="http://dogr.io">Dogr.io</a>.</p>
-
-<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_16.jpeg"><img src="http://adamsp.github.com/speakman-website/images/20-things/week_16.jpeg"></a></p>
-
-<!-- more -->
-
-
-<p>This was actually a bit of a pain - I&#8217;ve never used Node before, and some of the dependencies for this app were a bit of trouble. I had to have a certain Visual Studio &amp; Windows SDK installation on my Windows machine, so rather than bother with that I tried it on my Macbook, where an old installation of Macports got in the way. Eventually everything was there, and then Node was <em>easy</em>. Would like to play with it more in future.</p>
-
-<p>The problem I was having with OkHttp a few weeks back might finally be about to be resolved - <a href="http://stackoverflow.com/a/21078780/1217087">I got a reply from Jesse from Square</a>, though the fix that he&#8217;s implemented doesn&#8217;t actually solve my problem. It&#8217;s blocking on the <code>InputStream.read()</code> call, and the timeout check comes after this has returned.</p>
-
-<p>Finally, something else I&#8217;ve managed this week is to continue checking something in to Github every day - am up to an 18 day streak with this post.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 15]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/06/20-things-week-15/"/>
-    <updated>2014-01-06T18:06:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/01/06/20-things-week-15</id>
-    <content type="html"><![CDATA[<p>I checked in some code every day this week. That being said, I don&#8217;t really have a &#8216;Thing&#8217; that I&#8217;ve done. Turns out that I&#8217;m running out of ideas for small, week-long projects. My plan to do some small things and even a bigger project over my 2 week break didn&#8217;t work out so well - Christmas takes up a <em>lot</em> of time, and there was plenty of other things to do in my time off, too.</p>
-
-<p>So while I haven&#8217;t done any one thing worthy of note, some of the stuff I <em>have</em> done (these are mostly quite trivial):</p>
-
-<ul>
-<li>Implemented <a href="https://github.com/chrisbanes/ActionBar-PullToRefresh">PullToRefresh</a> library</li>
-<li>Implemented the <a href="https://github.com/keyboardsurfer/Crouton">Crouton</a> library for toasts</li>
-<li>Decided that loading 1000+ items with ORMLite to back a <code>ListView</code> was <em>not</em> a good idea and actually got around to writing the plumbing code to use a <code>Cursor</code></li>
-<li>Added a check for &#8216;last checked date&#8217; so we now query for the smallest number of quakes</li>
-</ul>
-
-
-<p><a href="http://adamsp.github.com/speakman-website/images/20-things/week_15.PNG"><img class="bottom" src="http://adamsp.github.com/speakman-website/images/20-things/week_15.PNG"></a></p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Weeks 13 and 14]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2014/01/01/20-things-weeks-13-and-14/"/>
-    <updated>2014-01-01T11:49:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2014/01/01/20-things-weeks-13-and-14</id>
-    <content type="html"><![CDATA[<p>You may have noticed (heh, who am I kidding - no one is sitting around waiting for these captivating posts) that I missed week 13 of my 20 Things, 20 Weeks project. I could make excuses about it being Christmas, and being super busy, but that&#8217;d be a lie. I was probably playing <a href="http://us.battle.net/hearthstone/en/">Hearthstone</a>.</p>
-
-<!-- more -->
-
-
-<p>This post is a couple of days late as well - I had the mindset that if I&#8217;ve already missed one, what&#8217;s one more? But I woke up this morning determined to get this out of the way.</p>
-
-<p>So, what&#8217;ve I done the last 2 weeks? Well for Week 13, I wasn&#8217;t ready by the end of Monday with my code - I got it checked in on <a href="https://github.com/adamsp/wsnz-android/commit/813d1ec9a60c01277dad256877aacfe5b4e3178a">Christmas Eve</a>, one day late for my Monday deadline. I added a fairly basic widget to <a href="https://play.google.com/store/apps/details?id=speakman.whatsshakingnz">What&#8217;s Shaking, NZ?</a> - it shows the magnitude, depth and time of the latest earthquake. This would&#8217;ve been in earlier, except I had <a href="http://stackoverflow.com/questions/20752788/android-widget-wont-switch-layouts-more-than-once">some trouble</a> getting it to do what I wanted when the user turned the background service off, as well as a bit of messing around getting the sizing right across devices. I&#8217;m actually a lot happier with the code in the final solution, so while it was frustrating at the time I&#8217;m almost glad I encountered that problem. Certainly I&#8217;ll know for next time!</p>
-
-<p>Speaking of next time - Week 14! I&#8217;ve started work on the &#8220;global&#8221; version of What&#8217;s Shaking?, which is coming along nicely. I think I&#8217;ll count my current progress (which is downloading earthquakes from USGS, storing them locally rather than in-memory like WSNZ, and displaying them in a list from the database) as a &#8220;Thing&#8221;. It is technically usable, and I feel it&#8217;s a good base to build a much nicer app on top of, though that&#8217;ll take a bit of time. I&#8217;ve been writing it in Android Studio too, which is really nice - and seems to now be stable enough to use, I&#8217;ve had no troubles with it. I feel that this new version can be a much better application than WSNZ; I have (literally) years of experience that I didn&#8217;t have when I first started WSNZ.</p>
-
-<p>Additionally, I&#8217;ve <a href="https://github.com/adamsp/wsnz-android/commit/d5818d88935afef5bec2b8264eeccf4b72d56485">finally added</a> a proper open-source licenses page to WSNZ - using the sample license page code I released a few weeks ago! Hurray! Unfortunately, I can&#8217;t release this update (with the widget and licenses page) as I can&#8217;t get Eclipse to export a signed APK. I&#8217;m certainly <a href="http://stackoverflow.com/questions/2680827/conversion-to-dalvik-format-failed-with-error-1-on-external-jar">not the only one</a> with this problem, but I&#8217;ve spent the last hour fighting Eclipse to build a release APK and it simply refuses. Hearthstone time, then. &#8216;Til next week!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things Week 12]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/20-things-week-12/"/>
-    <updated>2013-12-17T06:11:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/20-things-week-12</id>
-    <content type="html"><![CDATA[<p>Actually managed to get some code written this week, though it&#8217;s still pretty rough - I&#8217;ve got a basic widget working for What&#8217;s Shaking, NZ? for Android. Exciting stuff; that&#8217;ll be polished up and good to go next week. It was actually really easy to do, as I can update it directly from my existing background service (which polls the NZ Geonet API).</p>
-
-<p>Also wrote a <a href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string">blog post on a common Java encoding issue</a> - basically, when you&#8217;ve got a UTF-8 file with a Byte Order Mark at the start, things that parse that can freak out if they&#8217;re not expecting it. Easiest way to avoid it is to get rid of the BOM altogether.</p>
-]]></content>
-  </entry>
-  
-  <entry>
     <title type="html"><![CDATA[Broken JSONObject creation from a UTF-8 input String]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string/"/>
-    <updated>2013-12-17T06:04:00-05:00</updated>
+    <updated>2013-12-17T06:04:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/12/17/broken-jsonobject-creation-from-a-utf-8-input-string</id>
     <content type="html"><![CDATA[<blockquote><p>12-16 12:01:40.446: W/System.err(3873): org.json.JSONException: Value ﻿  of type java.lang.String cannot be converted to JSONObject</p></blockquote>
 
@@ -1448,55 +1413,9 @@
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[20 Things, Week 11]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/09/20-things-week-11/"/>
-    <updated>2013-12-09T21:03:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/12/09/20-things-week-11</id>
-    <content type="html"><![CDATA[<p>Once again, nothing to present this week. I&#8217;ve continued looking into this bug in KitKat that I mentioned last week; I&#8217;ve spent most of my time trying to replicate it in a minimal amount of code. This included exploring the <a href="https://github.com/square/okhttp">OkHttp tests</a> (which was&#8230; an interesting exercise), and modifying the sample code provided for the <a href="https://code.google.com/p/android/issues/detail?id=38817">original bug</a> whose fix I suspect introduced this problem.</p>
-
-<p>Despite all this, I&#8217;ve still been unable to reproduce it except via a Twitter stream (which requires a bit more setup than a chunked encoding HTTP connection without encoding - and so I&#8217;ve been avoiding this in the minimal time I&#8217;ve had to try this).</p>
-
-<p>Additionally, I lost a bit of motivation part way through the week with <a href="http://www.xda-developers.com/android/android-4-4-1-update-for-the-nexus-5-now-live/">news that 4.4.1 is just around the corner</a> - if the bug is fixed in that release, I won&#8217;t bother working on it anymore! Unfortunately, as of this writing, there&#8217;s still <a href="https://developers.google.com/android/nexus/images">no Nexus 7 2012 image available</a>.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 10]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/12/02/20-things-week-10/"/>
-    <updated>2013-12-02T17:56:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/12/02/20-things-week-10</id>
-    <content type="html"><![CDATA[<p>So, the halfway point of my wee experiment. 10 weeks out of 20. The most obvious question at this stage is have I created 10 Things? Nope, but that&#8217;s okay.</p>
-
-<!-- more -->
-
-
-<p>With Christmas coming up I&#8217;ve got 2 full weeks off work. That&#8217;s 2 weeks to spend time with my family, go to the beach, relax, and work on personal projects. I plan to push out enough gists, small projects, blog posts and simple programs in this time to catch up with what I&#8217;m behind - and I&#8217;ll hopefully even be able to get a bigger project done.</p>
-
-<p>Speaking of bigger projects, at this point it&#8217;s fair to say that I don&#8217;t think I can do many of the things on my original list - they&#8217;re too big to do in a week, especially when working a 40 hour week and having anything resembling a social life. I suspected this might be the case, but I was also hopeful that with a public declaration of intent to produce something weekly, I&#8217;d be able to find the time to make something happen.</p>
-
-<p>So what have I done this week? Well, again, I&#8217;ve not produced anything. But not because I&#8217;ve been slacking off, or even extremely busy with non-programming tasks. I recently received an email saying my <a href="https://play.google.com/store/apps/details?id=nz.net.speakman.android.dreamintweets">Android Daydream</a> wasn&#8217;t working properly on Android 4.4 - and I&#8217;ve spent most of my spare time over the last week trying to figure this out.</p>
-
-<p>The user-visible bug was that it wasn&#8217;t closing when you hit Home/Back. Stepping into the code, the call to shutdown the Twitter stream in the <code>onDreamingStopped</code> call wasn&#8217;t returning as quickly as it used to in 4.2 &amp; 4.3 - and then it was eventually crashing with a <code>NetworkOnMainThreadException</code>. Clearly that&#8217;s easy enough to fix - drop the <code>shutdown</code> call in another thread and return immediately. But that doesn&#8217;t fix the problem of why it doesn&#8217;t return near-immediately, so I&#8217;ve been poring over Android source &amp; changelogs trying to figure out <em>why</em>. Most of my findings I&#8217;ve collated in <a href="http://stackoverflow.com/q/20306498/1217087">this StackOverflow question</a> (which as of this writing, doesn&#8217;t have an answer).</p>
-
-<p>I&#8217;m going to spend more time on this this week - try to reproduce it with another <code>Transfer-Encoding: chunked</code> stream, and since it appears to be due to a change in OkHttp, I&#8217;ll ask in the Square community on Google+. With any luck, I&#8217;ll have enough data to log a comprehensive bug - or at the least understand what&#8217;s going on enough to implement a better fix.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[20 Things, Week 9]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/20-things-week-9/"/>
-    <updated>2013-11-25T20:01:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/20-things-week-9</id>
-    <content type="html"><![CDATA[<p>So this week, like most of the Things I&#8217;ve done for this project, I wrote a blog post. Shocking.</p>
-
-<p><a href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/">This post</a> was a fairly hefty one, covering the new <a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> library for Android. If you&#8217;re performing any network activity in an Android app, I&#8217;d recommend taking a look at it. It helps to avoid a whole skew of problems you may not even know exist, and has a lot of useful features. It takes a bit of reading to get set up, but once you know what you&#8217;re doing it&#8217;s great.</p>
-]]></content>
-  </entry>
-  
-  <entry>
     <title type="html"><![CDATA[Getting started with Volley for Android]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android/"/>
-    <updated>2013-11-25T17:55:00-05:00</updated>
+    <updated>2013-11-25T17:55:00-08:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2013/11/25/getting-started-with-volley-for-android</id>
     <content type="html"><![CDATA[<p><a href="https://android.googlesource.com/platform/frameworks/volley">Volley</a> is a new Android networking library from Google (well, by ‘new’ I mean from <a href="https://developers.google.com/events/io/sessions/325304728">May, at I/O 2013</a> - so some 7 months ago). It has some cool features - request queueing with priorities, automatic selection of the best HTTP library <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/Volley.java">depending on Android version</a>, and a nifty view for <a href="https://android.googlesource.com/platform/frameworks/volley/+/master/src/com/android/volley/toolbox/NetworkImageView.java">automatically loading images</a>. Unfortunately, even 7 months on, there’s pretty minimal documentation available. However across StackOverflow, a bunch of blogs and the source code, there’s plenty to go on to figure out how to do some basic tasks.</p>
 
@@ -2038,15 +1957,1056 @@
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[20 Things, Week 8]]></title>
-    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/18/20-things-week-8/"/>
-    <updated>2013-11-18T20:24:00-05:00</updated>
-    <id>http://adamsp.github.com/speakman-website/blog/2013/11/18/20-things-week-8</id>
-    <content type="html"><![CDATA[<p>We had a crazy week at work this week; we’re doing a rewrite of our app, and we had an internal stakeholder demo. Was doing some long hours.</p>
+    <title type="html"><![CDATA[Handling OutOfMemoryError with large bitmaps on older Android devices]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices/"/>
+    <updated>2013-11-10T12:42:00-08:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/11/10/handling-outofmemoryerror-with-large-bitmaps-on-older-android-devices</id>
+    <content type="html"><![CDATA[<p>If you&#8217;ve ever worked with bitmaps on an Android device before, you&#8217;ve <a href="http://stackoverflow.com/questions/477572/strange-out-of-memory-issue-while-loading-an-image-to-a-bitmap-object">likely</a> <a href="http://stackoverflow.com/questions/14235287/suggestions-to-avoid-bitmap-out-of-memory-error?lq=1">encountered</a> the <a href="https://code.google.com/p/android/issues/detail?id=8488">dreaded</a> <code>OutOfMemoryError</code> &#8216;bitmap size exceeds VM budget&#8217;. This issue can present itself immediately when testing, however on older devices it may not manifest except in certain cases. The reason for this is as follows:</p>
 
-<p>This weekend I went to <a href="http://devmob.co.nz">devmob</a> in Dunedin. It’s an unconference/barcamp that’s held here for mobile devs from all around the country. Met lots of interesting people and had a great time - but there was no time to write code.</p>
+<blockquote><p>In addition, prior to Android 3.0 (API Level 11), the backing data of a bitmap was stored in native memory which is not released in a predictable manner, potentially causing an application to briefly exceed its memory limits and crash.</p><footer><strong>Android Developer Documentation</strong> <cite><a href='http://developer.android.com/training/displaying-bitmaps/cache-bitmap.html'>developer.android.com/training/&hellip;</a></cite></footer></blockquote>
 
-<p>So, this week, I’ve done nothing towards my 20 Things. Unfortunate, but I knew this would happen. Next week I’ll definitely have something out!</p>
+
+<p>Depending on what you&#8217;re doing, there is a way to get around this.</p>
+
+<!-- more -->
+
+
+<p>The situation where I encountered this was at work when working on a control for displaying a seat map for a movie theatre as part of a ticket purchasing wizard. It shows the screen, the seats, some seat numbers, etc. From there the app user is able to pick seats to sit in for watching the movie. Previously this had been built by drawing many <code>Button</code> controls with a custom drawable. This was terribly inefficient, as all those controls had to be totally redrawn whenever the user tried to zoom, and was practically unusable for large theatres (with hundreds of seats) even on top end devices.</p>
+
+<p>Clearly this was due for a rewrite. The method I worked out for doing this was to create a &#8216;base&#8217; bitmap from the theatre data showing all empty and already-sold seats. I&#8217;d use this as a static base image, and then paint &#8216;selected&#8217; seats on top of that as the user taps to select/deselect seats they&#8217;d like to sit in.</p>
+
+<p>This method had a few benefits we didn&#8217;t enjoy with the old method:</p>
+
+<ul>
+<li>we only had to create the whole theatre model (calculating seat positions etc) once, when creating the base image (previously it was re-calculating seat sizes and locations at every zoom level, ugh)</li>
+<li>since it was an image, we could now just drop it inside a <a href="https://github.com/MikeOrtiz/TouchImageView">TouchImageView</a> and that would handle zooming and panning (and <a href="https://github.com/MikeOrtiz/TouchImageView/pull/33">this pull request</a> maps touch inputs back to our original image co-ordinates after zoom)</li>
+<li>the static base image meant we only had to perform N+1 passes across the canvas when drawing seat selections, where N was the number of selected seats (typically low, so this is very fast)</li>
+</ul>
+
+
+<p>So off I went and coded this brilliant design. The code for the <code>SeatingImageView</code> control ended up looking <em>something</em> like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
+</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
+</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So you&#8217;d set your base image, then overlay some selected seat images on top of that as necessary. I tested this on my phone (Galaxy SII i9100, Android 4.1) and my Nexus 7 (2012 model, Android 4.3) and sent it off to QA to be approved.</p>
+
+<p>But our tester sent it back. She said it was crashing whenever she selected a seat - but only on certain cinemas. This was odd, as I couldn&#8217;t replicate it at all. I went and had a chat to her, and sure enough, it was definitely crashing on her device (an old HTC running Android 2.3). I borrowed the phone and went about figuring this out.</p>
+
+<p>Of course, it was the dreaded <code>OutOfMemoryError</code>. But how to fix this? I was already capping the size of the bitmap when building the base image and scaling seats down to fit. If I forced the max size to be lower, then large cinemas started to look awfully pixelated when zoomed in. I did some logging of the memory, and it appeared that the OOM was occurring at the time we created the new image with the seats - <code>Bitmap mutable = immutablebase.copy(Bitmap.Config.ARGB_8888, true);</code>.</p>
+
+<p>We had in memory at this point 3 copies of the bitmap:</p>
+
+<ol>
+<li>the immutable base image that wasn&#8217;t being displayed (<code>mImmutableBase</code>)</li>
+<li>the <em>copy</em> of the immutable base we&#8217;d created that was currently being displayed to the user (<code>setImageBitmap(mImmutableBaseBitmap.copy(Bitmap.Config.RGB_8888, true));</code>)</li>
+<li>the copy we&#8217;d <em>just created</em> to draw the newly selected seats onto (<code>Bitmap mutable = immutablebase.copy(Bitmap.Config.RGB_8888, true);</code>)</li>
+</ol>
+
+
+<p>That seemed easy enough to handle - we&#8217;d just get rid of the one being displayed before we created a copy of the immutable base, then we&#8217;d only ever have 2 in memory at once. I updated my <code>drawSeats</code> method to look like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span> <span class="c1">// Clear all references to the existing bitmap</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But this didn&#8217;t work either!</p>
+
+<p>Reading through <a href="https://code.google.com/p/android/issues/detail?id=8488#c80">this thread</a> (post #80 down is especially useful) helps to shed some light on what&#8217;s causing us to run out of memory here. The bitmap has memory in both the native and Dalvik heap, and it&#8217;s not getting recycled from native quickly enough. Luckily, there is a way to force this to occur.</p>
+
+<p>The fix was to:</p>
+
+<ol>
+<li>acquire a reference to the bitmap that is currently being shown - <code>getDrawable()</code></li>
+<li>tell the <code>ImageView</code> to show nothing - <code>setImageBitmap(null)</code> - while still holding a reference to the old bitmap</li>
+<li>manually call <code>recycle()</code> on the old bitmap - this clears the native heap allocation</li>
+<li>although we <em>shouldn&#8217;t have to</em> call <code>System.gc()</code>, I found that this was still required to consistently remove the bitmap from memory</li>
+</ol>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SeatingImageView</span> <span class="kd">extends</span> <span class="n">TouchImageView</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">mImmutableBase</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setBaseImage</span><span class="o">(</span><span class="n">Bitmap</span> <span class="n">baseImage</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">baseImage</span><span class="o">.</span><span class="na">isMutable</span><span class="o">())</span>
+</span><span class='line'>            <span class="n">baseImage</span> <span class="o">=</span> <span class="n">Bitmap</span><span class="o">.</span><span class="na">createBitmap</span><span class="o">(</span><span class="n">baseImage</span><span class="o">);</span> <span class="c1">// Immutable copy</span>
+</span><span class='line'>        <span class="n">mImmutableBase</span> <span class="o">=</span> <span class="n">baseImage</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mImmutableBaseBitmap</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">));</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawSeats</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Drawable</span><span class="o">&gt;</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">mImmutableBase</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">recycleOldImage</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Bitmap</span> <span class="n">mutable</span> <span class="o">=</span> <span class="n">immutablebase</span><span class="o">.</span><span class="na">copy</span><span class="o">(</span><span class="n">Bitmap</span><span class="o">.</span><span class="na">Config</span><span class="o">.</span><span class="na">ARGB_8888</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Canvas</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">for</span><span class="o">(</span><span class="n">Drawable</span> <span class="n">seat</span> <span class="o">:</span> <span class="n">seats</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">seat</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">setImageBitmap</span><span class="o">(</span><span class="n">mutable</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">recycleOldImage</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Drawable</span> <span class="n">oldImage</span> <span class="o">=</span> <span class="n">getDrawable</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">oldImage</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">setImageBitmap</span><span class="o">(</span><span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">BitmapDrawable</span> <span class="n">oldBitmap</span> <span class="o">=</span> <span class="o">(</span><span class="n">BitmapDrawable</span><span class="o">)</span><span class="n">oldImage</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">oldBitmap</span><span class="o">.</span><span class="na">getBitmap</span><span class="o">().</span><span class="na">recycle</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This fixed the bug! The memory logging I’d put in showed that were were only keeping at max two copies of the base image in memory at a time, and more importantly we weren’t seeing any crashes.</p>
+
+<p>However, the logs were also showing that we were still precariously close to the memory limit for the device. I was concerned about other devices with <a href="http://stackoverflow.com/questions/4351678/two-questions-about-max-heap-sizes-and-available-memory-in-android">even lower memory limits</a> - or other edge case theatre layouts we didn’t have examples for. This required something of a minor design change to resolve.</p>
+
+<p>I&#8217;d been depending on using ARGB_8888 config for the alpha channel, providing a transparent background behind the seat images to match the background for the rest of the screen. After some experimentation I discovered that there was no noticable change in the colour of my seat images when switching to RGB_565, but the memory usage dropped by a large amount - enough that I was happy I wasn&#8217;t going to hit the cap again. It was simple enough to modify the control to take a &#8216;background&#8217; colour at creation, which reproduced the effects of transparency. Of course if you&#8217;re faced with the same situation but are using a background with a gradient, or a colour not accurately reproducable in RGB_565, this will not work for you as easily.</p>
+
+<p>Other tips:</p>
+
+<ul>
+<li>use RGB_565 if you can - it uses a lot less memory than ARGB_8888 (2 bytes per pixel instead of 4)</li>
+<li>if you&#8217;re debugging memory issues with bitmaps, <strong>use an Android 3.0 or higher device</strong> to debug, since bitmap memory allocations are reflected correctly in the Dalvik heap on these devices (see the <a href="http://developer.android.com/training/articles/memory.html#Bitmaps">memory docs</a>)</li>
+<li>always test on the lowest spec device you have available to you, even if you&#8217;re not doing all your development on that</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Android Currency Localisation Hell]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/10/21/android-currency-localisation-hell/"/>
+    <updated>2013-10-21T17:45:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/10/21/android-currency-localisation-hell</id>
+    <content type="html"><![CDATA[<p>We had a customer at work recently who had a special requirement around multiple currency support in our Android app. They have cinema sites in multiple countries, and they want customers to see the correct currency symbol when viewing sessions for a site. Up until now, the app has only ever had to deal with single currencies on a per-customer (and hence per-build) basis.</p>
+
+<p>While implementing this multiple currency support, I came across something of a problem - the Android Currency code doesn&#8217;t behave quite as you&#8217;d hope, and is inconsistent across versions. Sometimes you get a currency symbol where you&#8217;re supposed to, sometimes you don&#8217;t - and sometimes the symbol is a slightly different symbol in one locale to that which is in another (￥, I&#8217;m looking at you). I&#8217;ve now got a set of <a href="https://github.com/adamsp/CurrencyFormattingDemo">test cases</a> which do a fair job of explaining the issue, as well as the solution we came up with which <em>mostly</em> works.</p>
+
+<!-- more -->
+
+
+<h3>The status quo</h3>
+
+<p>Our app is designed to use a JSON configuration file to set customer-specific settings during build, including a single default currency symbol which we were prepending to the currency value. The items being purchased in the app all come down from a web service, and the values are specified in cents - every value gets divided by 100 to get the &#8216;true&#8217; value for the currency. This is legacy behaviour in the service backend that has been in place for over a decade and cannot be changed.</p>
+
+<p>Luckily however, we can <em>add</em> to it. The design that came through initially was simply to allow the customer to specify a currency symbol on a per-site basis, and then expose this via the web service. Being developers, we didn&#8217;t feel this was good enough. What about the case where the &#8216;special case&#8217; sites (that is, the ones which don&#8217;t match the default currency symbol) are in a different currency with the same symbol? (NZ$/AU$, or CA$/US$) Eventually we settled on specifying an <a href="http://en.wikipedia.org/wiki/ISO_4217">ISO 4217 currency code</a> <strong>per location that is a special case</strong> - 3 characters, and they&#8217;re associated with a symbol. This is populated in a drop-down list in the existing configuration application for the site.</p>
+
+<p>So, now we&#8217;ve got this currency code coming through for these special case sites. We should be able to format currency values using this, right? According to the <a href="http://developer.android.com/reference/java/util/Currency.html">Currency documentation</a>, we can. Our intent was to format the currency <strong>value</strong> (whether numbers appear as 15,00 € like in France, or as $15.00 like in the US) using the device locale, while customising the currency <strong>symbol</strong> - this would provide optimum readability for the user (the value appears in the format they&#8217;re most used to) while also providing an accurate representation of what currency the figure is in.</p>
+
+<p>So, after a bit of research I figured I should be able to write code like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getFormattedCurrencyString</span><span class="o">(</span><span class="n">String</span> <span class="n">isoCurrencyCode</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// This formats currency values as the user expects to read them (default locale).</span>
+</span><span class='line'>  <span class="n">NumberFormat</span> <span class="n">currencyFormat</span> <span class="o">=</span> <span class="n">NumberFormat</span><span class="o">.</span><span class="na">getCurrencyInstance</span><span class="o">();</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// This specifies the actual currency that the value is in, and provides the currency symbol.</span>
+</span><span class='line'>  <span class="n">Currency</span> <span class="n">currency</span> <span class="o">=</span> <span class="n">Currency</span><span class="o">.</span><span class="na">getInstance</span><span class="o">(</span><span class="n">isoCurrencyCode</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// Note we don&#39;t supply a locale to this method - uses default locale to format the currency symbol.</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">symbol</span> <span class="o">=</span> <span class="n">currency</span><span class="o">.</span><span class="na">getSymbol</span><span class="o">();</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// We then tell our formatter to use this symbol.</span>
+</span><span class='line'>  <span class="n">DecimalFormatSymbols</span> <span class="n">decimalFormatSymbols</span> <span class="o">=</span> <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">getDecimalFormatSymbols</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">decimalFormatSymbols</span><span class="o">.</span><span class="na">setCurrencySymbol</span><span class="o">(</span><span class="n">symbol</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">setDecimalFormatSymbols</span><span class="o">(</span><span class="n">decimalFormatSymbols</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="k">return</span> <span class="n">currencyFormat</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Unfortunately, while I initially tested this with one or two samples and figured it would work as advertised, I was wrong.</p>
+
+<h3>Certain locales cannot localise currencies</h3>
+
+<p>As I was writing unit tests for this, I discovered that I wasn&#8217;t getting expected results. I was running these tests on a device (a Galaxy S II) set to New Zealand locale - and my tests were failing. When I ran them on an emulator (which defaults to US locale), I got <em>different</em> results - some of the failing tests passed, but I got a new set of failures.</p>
+
+<p>The failures on my device were cases where I was getting the ISO currency code back instead of the symbol. &#8220;AUD&#8221; instead of &#8220;AU$&#8221;, etc. The case where I supplied &#8220;NZD&#8221; I was expecting &#8220;NZ$&#8221; - yet I was getting &#8220;$&#8221;, and not &#8220;NZD&#8221; like the others. And even more confusing, these tests were passing on the emulator - I was getting the expected symbols!</p>
+
+<p>So I tried supplying a <code>Locale</code> object and using that, rather than the device default, so I could see what behaviour I got on a variety of locales:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getFormattedCurrencyStringForLocale</span><span class="o">(</span><span class="n">Locale</span> <span class="n">locale</span><span class="o">,</span> <span class="n">String</span> <span class="n">isoCurrencyCode</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// This formats currency values as the user expects to read them (default locale).</span>
+</span><span class='line'>  <span class="n">NumberFormat</span> <span class="n">currencyFormat</span> <span class="o">=</span> <span class="n">NumberFormat</span><span class="o">.</span><span class="na">getCurrencyInstance</span><span class="o">(</span><span class="n">locale</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// This specifies the actual currency that the value is in, and provides the currency symbol.</span>
+</span><span class='line'>  <span class="n">Currency</span> <span class="n">currency</span> <span class="o">=</span> <span class="n">Currency</span><span class="o">.</span><span class="na">getInstance</span><span class="o">(</span><span class="n">isoCurrencyCode</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// Note we don&#39;t supply a locale to this method - uses default locale to format the currency symbol.</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">symbol</span> <span class="o">=</span> <span class="n">currency</span><span class="o">.</span><span class="na">getSymbol</span><span class="o">(</span><span class="n">locale</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// We then tell our formatter to use this symbol.</span>
+</span><span class='line'>  <span class="n">DecimalFormatSymbols</span> <span class="n">decimalFormatSymbols</span> <span class="o">=</span> <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">getDecimalFormatSymbols</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">decimalFormatSymbols</span><span class="o">.</span><span class="na">setCurrencySymbol</span><span class="o">(</span><span class="n">symbol</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">setDecimalFormatSymbols</span><span class="o">(</span><span class="n">decimalFormatSymbols</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="k">return</span> <span class="n">currencyFormat</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Looking at the code above, the line <code>String symbol = currency.getSymbol()</code> is the one that fetches the symbol. The <code>getSymbol()</code> method has an overload <code>getSymbol(Locale locale)</code>. If I took the step of passing this method the <code>locale</code> parameter, I got different results. Interesting!</p>
+
+<p>The <a href="http://developer.android.com/reference/java/util/Currency.html">documentation</a> for <code>public String getSymbol (Locale locale)</code> in the <code>Currency</code> class says:</p>
+
+<blockquote><p>Added in API level 1<br/>Returns the localized currency symbol for this currency in locale. That is, given &#8220;USD&#8221; and Locale.US, you&#8217;d get &#8220;$&#8221;, but given &#8220;USD&#8221; and a non-US locale, you&#8217;d get &#8220;US$&#8221;.</p><p>If the locale only specifies a language rather than a language and a country (such as Locale.JAPANESE or {new Locale(&#8220;en&#8221;, &#8220;&#8221;)} rather than Locale.JAPAN or {new Locale(&#8220;en&#8221;, &#8220;US&#8221;)}), the ISO 4217 currency code is returned.</p><p>If there is no locale-specific currency symbol, the ISO 4217 currency code is returned.</p></blockquote>
+
+
+<p>The important part there is the last bit. <strong>If there is no locale-specific currency symbol, the ISO 4217 currency code is returned.</strong> That&#8217;s what I was seeing - if the locale didn&#8217;t &#8216;know&#8217; how to format a currency symbol for the supplied currency, it would just return the currency code.</p>
+
+<p>Huh, okay. How do we fix that, then?</p>
+
+<p>As it turns out, the US locale has formatting for <em>most</em> currency codes. It doesn&#8217;t quite match in some cases (it might provide UK£ instead of £UK, for example) and in certain scenarios it doesn&#8217;t have a symbol, but for the most part, it&#8217;s better than anything else. There&#8217;s one case where we don&#8217;t want this to use the US locale though - USD ISO code, with a non-US device locale. We can fix that with a hard coded symbol of &#8216;US$&#8217;.</p>
+
+<p>There is also the issue that when the currency code matches the users locale (for example, NZD and en_NZ locale), the users see NZ$ rather than $. We handle this internally by utilising our existing behaviour of having a default currency symbol specified in the app build. If we receive a response that contains a currency code, we utilise the code for getting a currency symbol for that code. If we don&#8217;t receive a currency code (which is the case most of the time, to maintain backwards compatibility, and the majority of cinemas don&#8217;t actually support multiple countries), we just use the symbol from the build config. That code isn&#8217;t shown here, but it&#8217;s a simple check to see if the <code>isoCurrencyCode</code> value is null or empty, and if it is then we use the default symbol.</p>
+
+<p>So, the final version of the method is as follows. Note that we still use the device locale for formatting the numbers, and where the symbol goes within the string - we only use US locale for the symbol itself.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getFormattedCurrencyString</span><span class="o">(</span><span class="n">String</span> <span class="n">isoCurrencyCode</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// This formats currency values as the user expects to read them (default locale).</span>
+</span><span class='line'>  <span class="n">NumberFormat</span> <span class="n">currencyFormat</span> <span class="o">=</span> <span class="n">NumberFormat</span><span class="o">.</span><span class="na">getCurrencyInstance</span><span class="o">();</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// This specifies the actual currency that the value is in, and provides the currency symbol.</span>
+</span><span class='line'>  <span class="n">Currency</span> <span class="n">currency</span> <span class="o">=</span> <span class="n">Currency</span><span class="o">.</span><span class="na">getInstance</span><span class="o">(</span><span class="n">isoCurrencyCode</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// Our fix is to use the US locale as default for the symbol, unless the currency is USD</span>
+</span><span class='line'>  <span class="c1">// and the locale is NOT the US, in which case we know it should be US$.</span>
+</span><span class='line'>  <span class="n">String</span> <span class="n">symbol</span><span class="o">;</span>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="n">isoCurrencyCode</span><span class="o">.</span><span class="na">equalsIgnoreCase</span><span class="o">(</span><span class="s">&quot;usd&quot;</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">Locale</span><span class="o">.</span><span class="na">getDefault</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">Locale</span><span class="o">.</span><span class="na">US</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">symbol</span> <span class="o">=</span> <span class="s">&quot;US$&quot;</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">symbol</span> <span class="o">=</span> <span class="n">currency</span><span class="o">.</span><span class="na">getSymbol</span><span class="o">(</span><span class="n">Locale</span><span class="o">.</span><span class="na">US</span><span class="o">);</span> <span class="c1">// US locale has the best symbol formatting table.</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="c1">// We then tell our formatter to use this symbol.</span>
+</span><span class='line'>  <span class="n">DecimalFormatSymbols</span> <span class="n">decimalFormatSymbols</span> <span class="o">=</span> <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">getDecimalFormatSymbols</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">decimalFormatSymbols</span><span class="o">.</span><span class="na">setCurrencySymbol</span><span class="o">(</span><span class="n">symbol</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">((</span><span class="n">java</span><span class="o">.</span><span class="na">text</span><span class="o">.</span><span class="na">DecimalFormat</span><span class="o">)</span> <span class="n">currencyFormat</span><span class="o">).</span><span class="na">setDecimalFormatSymbols</span><span class="o">(</span><span class="n">decimalFormatSymbols</span><span class="o">);</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="k">return</span> <span class="n">currencyFormat</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>But wait, there&#8217;s more</h3>
+
+<p>Now, that seems pretty good, right? Not quite - there&#8217;s a few scenarios you need to be aware of. Formatting numbers for France, one expects something like &#8220;15,00 $NZ&#8221; - that&#8217;s a comma instead of a period, a space after the numbers, followed by the symbol and then the country code. That&#8217;s how the French locale (fr_FR) localises currency values. Unfortunately, since we&#8217;re using the US locale (en_US) to format the symbol, we get &#8220;15,00 NZ$&#8221;. This is still completely readable, however it&#8217;s not <strong>quite</strong> right. It&#8217;s probably good enough, but still unfortunate.</p>
+
+<p>Additionally, I was also getting differences in my JPY tests. First, my phone (running Android 4.1) was getting ￥15 - that was what I expected, the yen does not have more than one unit. However the emulator was getting ￥15.00 - two decimal places, where there should be 0! So, I fired up a few more emulators and did some more testing.</p>
+
+<p>It turns out that for versions of Android 4.0.3 and down, the currency format (the <code>NumberFormat.getCurrencyInstance(locale);</code> formatter) does not work correctly for locales that have only single units in their currency. If you check out the <a href="https://github.com/adamsp/CurrencyFormattingDemo">sample project</a> you can see that for the Japanese Yen and the Chilean Peso, both of which have only single units, earlier versions of Android will format these with decimal places, where as 4.1 and up does not.</p>
+
+<p>But wait, there&#8217;s still more. Different locales also return <em>different versions of the same symbol</em>. The US locale (en_US) returns a <a href="http://www.fileformat.info/info/unicode/char/ffe5/index.htm">full-width ￥</a> symbol, where as the Japan locale (ja_JP) returns a <a href="http://www.fileformat.info/info/unicode/char/a5/index.htm">regular ￥</a> symbol. Similarly, the French locale (fr_FR) will return a <a href="http://www.fileformat.info/info/unicode/char/a0/index.htm">non-breaking space</a> between the digits and the symbol, where as the French Canadian locale (fr_CA) which formats numbers the same way (&#8220;15,00 $NZ&#8221;, like above) uses a <a href="http://www.fileformat.info/info/unicode/char/0020/index.htm">regular space</a>. This makes writing tests a pain in the ass, but it shouldn&#8217;t have much impact on actually displaying these things to the user - of course, you do have to be careful if you&#8217;re doing string comparisons.</p>
+
+<h3>Currency localisation sucks</h3>
+
+<p>So, all up, what should&#8217;ve taken me an hour or so took over 2 days, working out why things weren&#8217;t behaving themselves. Even after all that time, I&#8217;m still not sure I&#8217;ve got it all figured out - I&#8217;ve rewritten this blog post about 5 times, and I can&#8217;t reproduce some things I had noted down from when I was doing this at work. Hopefully, reading through this saves someone else some pain and gives them an explanation as to why their tests are failing - or worse, users are reporting strange behaviour around currencies.</p>
+
+<p>Of course, if you&#8217;re only targetting one market, this may not be a problem for you at all. But be prepared for the day you expand - this could definitely come back and bite you.</p>
+
+<p>(As a side note, I realise that the test cases I&#8217;ve supplied are far from comprehensive - I especially lost my incentive to continue when I discovered they were behaving differently on different devices, at least until I&#8217;d discovered why that was the case.)</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Android Open Source licenses page]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/09/24/android-open-source-licenses-page/"/>
+    <updated>2013-09-24T20:49:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/09/24/android-open-source-licenses-page</id>
+    <content type="html"><![CDATA[<p>Ever used an open source library in your Android app? If you have, then you <a href="http://www.tldrlegal.com/browse">probably</a> should have included a page with the license details for that library. If you did, great! You probably had the same question I did recently; how should you do that?</p>
+
+<!-- more -->
+
+
+<p>My first attempt looked like this - in fact, this is currently what my &#8217;<a href="https://github.com/adamsp/wookmark">Wookmark Viewer</a>&#8217; licenses page looks like:</p>
+
+<p><a href="http://adamsp.github.com/speakman-website/images/android-licenses-page/wookmark_licenses.png"><img src="http://adamsp.github.com/speakman-website/images/android-licenses-page/wookmark_licenses.png" width="240" height="400" title="Wookmark Licenses" ></a></p>
+
+<p>However, while this page details the libraries used and their licenses, and provides links to those things, it isn&#8217;t good enough. It says in the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License, Version 2.0</a>:</p>
+
+<blockquote><p>You must give any other recipients of the Work or Derivative Works a copy of this License.</p></blockquote>
+
+
+<p>So how should I do that? Do I have to include the same license multiple times for different libraries that use the same license? How do I include that in a regular old TextView?</p>
+
+<p>I revisited these issues at work recently when I was tasked with adding the licenses page to our app. After some time looking around online, I couldn&#8217;t really find any suggestions as to how this page should behave, how it should look, or how to display licenses for multiple libraries. The only thing I found was <a href="http://stackoverflow.com/questions/11300552/license-screen-about-phone-legal-information-open-licenses-screen">this Stack Overflow question</a>, but that was enough of a lead to set me on the right path. I checked out some of the other Google apps - see the Play Music and Gmail apps licenses pages below. This is simply an HTML page displayed in a DialogFragment. This is more like it!</p>
+
+<p><a href="http://adamsp.github.com/speakman-website/images/android-licenses-page/play_music_licenses.png"><img src="http://adamsp.github.com/speakman-website/images/android-licenses-page/play_music_licenses.png" width="240" height="400" title="Play Music Licenses" ></a>
+<a href="http://adamsp.github.com/speakman-website/images/android-licenses-page/gmail_licenses.png"><img src="http://adamsp.github.com/speakman-website/images/android-licenses-page/gmail_licenses.png" width="240" height="400" title="Gmail Licenses" ></a></p>
+
+<p>This answers the questions of how to display things nicely (including the full license text), how to handle multiple libraries with the same license, how to display any copyright notice, and how to link to any modified source code, as required in the <a href="http://opensource.org/licenses/gpl-2.0.php">GPL-2.0</a> license, for example. It should also be simple enough to set up to automatically construct this page (or a similar one) in your build scripts - including any custom text you may want to add, as I&#8217;ve done above for my original attempt on the Wookmark app.</p>
+
+<p>I&#8217;ve created a DialogFragment that reproduces the Google apps licenses page experience - <a href="https://github.com/adamsp/AndroidLicensesPage">AndroidLicensesPage on Github</a>.</p>
+
+<p>If you want to use this fragment in your application, you need to include <code>LicensesFragment.java</code> in your projects source, as well as including the <code>licenses_fragment.xml</code> layout file in <code>/res/layout</code> and the <code>licenses.html</code> file in <code>/res/raw</code>. You should update the namespace to suit.</p>
+
+<p>To display licenses for your app, you need to update the <code>licenses.html</code> file to suit (including any libraries you&#8217;ve used, their licenses, copyrights, and any links to source you may have modified, if required), then you can display it as you would any other <a href="http://developer.android.com/reference/android/app/DialogFragment.html">DialogFragment</a>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>// Create & show a licenses fragment just as you would any other DialogFragment.
+</span><span class='line'>FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+</span><span class='line'>Fragment prev = getSupportFragmentManager().findFragmentByTag("licensesDialogFragment");
+</span><span class='line'>if (prev != null) {
+</span><span class='line'>  ft.remove(prev);
+</span><span class='line'>}
+</span><span class='line'>ft.addToBackStack(null);
+</span><span class='line'>
+</span><span class='line'>// Create and show the dialog.
+</span><span class='line'>DialogFragment newFragment = LicensesFragment.newInstance();
+</span><span class='line'>newFragment.show(ft, "licensesDialogFragment");</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There are some TODOs in the LicensesFragment file - you should modify these things to suit your environment, though things will work fine without you needing to touch anything.</p>
+
+<p>If you want to see an example of this in action, clone the repository and you should be able to open the included AndroidLicensesPageExampleProject in Android Studio. It should run directly on any device or emulator running Android 2.1 or higher.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Adding Google Play Services to an Android Studio project]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project/"/>
+    <updated>2013-06-23T10:55:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/06/23/adding-google-play-services-to-an-android-studio-project</id>
+    <content type="html"><![CDATA[<p>Adding a support library to Android Studio is a bit different to how it&#8217;s done in Eclipse. Where you&#8217;d add a &#8216;project&#8217; in Eclipse, in Studio you add a &#8216;Module&#8217; (which is a sub-project of your overall application - similar to Projects in a Solution, if you&#8217;ve done any .NET development). In this post I detail how to add the Google Play Services project, but you should be able to follow the instructions to add any support library.</p>
+
+<!-- more -->
+
+
+<p><strong>Edit July 10 2013:</strong> Note that this post only applies to projects <strong>not</strong> using Gradle.</p>
+
+<p>Most of this information can be found on the <a href="https://developer.android.com/google/play-services/setup.html">Android Developer site</a>.</p>
+
+<p>This guide assumes you already have an application project set up, and you&#8217;re looking to add this support library in to enable new features. For setting up the main project, check out the <a href="http://developer.android.com/sdk/installing/studio.html">Android Studio documentation</a>.</p>
+
+<ol>
+<li>Update Google Play Game Services via the SDK Manager - you can launch this from <em>Tools -> Android -> SDK Manager</em>. This will download all the required files to your Android SDK install directory.</li>
+<li>Copy the <code>google-play-services_lib/</code> folder (<strong>the whole folder</strong>, not just the .jar) from  <code>&lt;android-sdk&gt;/extras/google/google_play_services/libproject/google-play-services_lib/</code> to your <code>lib/</code> folder in your project.</li>
+<li>In Android Studio, select <em>File -> Import Module</em>, then select the <code>google-play-services_lib</code> folder (the one you just copied into your project directory, not the one from your SDK directory).</li>
+<li>Make sure &#8216;Create module from existing sources&#8217; is selected, then Next, Next, until you reach the end of the wizard.</li>
+<li>Now you have to add a reference to your new module from your existing application. Right click your existing game module (should be the top line in the Project explorer) and select <em>Open Module Settings</em>. Along the left side select <em>Modules</em> and you should see both your existing application module and your newly added library module listed. Make sure your app is selected, then choose the <em>Dependencies</em> tab. There should be a <strong>+</strong> sign at the bottom (on a Mac), or on the right side (on Windows). Click this then select <em>Module dependency</em> and add the <em>google-play-services_lib</em> module.</li>
+<li>Ok, now you have everything set up correctly in your existing app module, but you need to finish setting up the one you just imported. Still in the settings window from the previous step, select the <em>google-play-services_lib</em> module under the <em>Modules</em> section. Again, click the <strong>+</strong> on the Dependencies tab but this time we&#8217;re going to choose &#8216;Jars or directories&#8217;. Navigate to the <code>google-play-services_lib/libs/</code> folder (again, the one in your application directory and not the SDK directory) and pick <em>google-play-services.jar</em>.</li>
+<li>Finally, we have to make sure that other modules have access to the google-play-services.jar. In the <em>Dependencies</em> tab for the <em>google-play-services_lib</em> module, check the &#8216;Export&#8217; checkbox for the <em>google-play-services.jar</em> entry. This makes the JAR accessible to any other module that references this one.</li>
+</ol>
+
+
+<p>The important part is that you import the whole project, not just the JAR file. If you only import the JAR, you don&#8217;t get the associated resources. Check out this <a href="http://www.youtube.com/watch?v=nkJS_W-VC9I">Google Developers</a> video for more detail - it&#8217;s the first mistake they list.</p>
+
+<p>If you use proguard, add this to your proguard-project.txt:</p>
+
+<pre><code>-keep class * extends java.util.ListResourceBundle {
+    protected Object[][] getContents();
+}
+</code></pre>
+
+<p>You can confirm that it&#8217;s worked by building the project (you may need to do a <em>Build -> Rebuild Project</em>) and making sure there&#8217;s no errors. To see the imported module in the Project explorer, switch the drop down at the top of the Project explorer to &#8216;Packages&#8217; instead of &#8216;Project&#8217;.</p>
+
+<p>If you&#8217;re adding a project other than Google Play Services, such as <a href="http://actionbarsherlock.com/">ActionBarSherlock</a>, that project may use the Android support library. If you&#8217;re using this too (as is likely) you need to ensure you only have one support library JAR referenced. You should export the JAR from the library (as in step 7 above) and then delete the one in your own module.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Reflections on finishing an Android app]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2013/02/28/reflections-on-finishing-an-android-app/"/>
+    <updated>2013-02-28T22:31:00-08:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2013/02/28/reflections-on-finishing-an-android-app</id>
+    <content type="html"><![CDATA[<p>A few days ago I finally finished the application I&#8217;ve been working on in my spare moments over the last month or two. It&#8217;s called <a href="https://github.com/adamsp/wookmark">Wookmark Viewer</a> and it&#8217;s a simple little app that lets you browse the latest images saved on <a href="http://www.wookmark.com">Wookmark.com</a> (Wookmark is an &#8216;image bookmarking&#8217; site, so there&#8217;s all sorts of images from all over the web that get saved there). This was an interesting project for me, as I got to use a few different open source libraries (including one I ended up almost totally rewriting), switched IDE from Eclipse to IntelliJ, and had to figure out some new Android features I hadn&#8217;t used before.</p>
+
+<p>This post-mortem picks apart what I enjoyed building, what caused me troubles, and what needs changing - the app is far from perfect.</p>
+
+<!-- more -->
+
+
+<h3>User Experience</h3>
+
+<p>The app should be fairly easy to pick up and use for anyone who&#8217;s used an app with a sliding menu before. These include Facebook, NHL Game Center, YouTube and Falcon Pro, among others - so the sliding menu system is not an uncommon one. While I&#8217;ve tried to keep the user experience consistent, the final result is actually (in my opinion) quite bad, and completely inconsistent.</p>
+
+<p>Swipe open the side-menu, and choose &#8216;New&#8217; (assuming you&#8217;re currently looking at &#8216;Popular&#8217; images). Now, press the Back button on the device - and exit the app. The idea of swapping the fragments in/out via the menu, instead of navigating to a new page, may be lost on the user. Certainly I&#8217;ve exited the app by accident a few times when I just wanted to go to the previous page.</p>
+
+<p>However, even this poor behaviour isn&#8217;t consistent. If you go to the &#8216;Color Search&#8217; page and search of a colour, you can hit the Back button and return to the search page from the results. I consider this to be good behaviour on its own, but it&#8217;s still very confusing since it&#8217;s so different to every other page.</p>
+
+<p>Finally, the &#8216;Settings&#8217; page is different again. Clicking on Settings brings forward an entirely new activity - with no access to the sliding menu, no branding (on 2.2/2.3), and no subheadings on the settings. On newer versions of Android you&#8217;re provided with a <code>PreferenceFragment</code> which you can use like a regular <code>PreferenceActivity</code>, but as a fragment. Unfortunately this has not been implemented in the support library, and I couldn&#8217;t find a quick/easy way of doing it, so (since I was keen to just get the damn thing finished) I went the easy way of just using a <code>PreferenceActivity</code> - resulting in this inconsistent behaviour.</p>
+
+<h3>Open source libraries</h3>
+
+<p>Wookmark Viewer utilises a total of 5 open source libraries: <a href="https://github.com/adamsp/SlidingMenu">SlidingMenu</a> for the menu system; <a href="https://github.com/JakeWharton/ActionBarSherlock">ActionBarSherlock</a> for the action bar view styling; <a href="https://github.com/adamsp/LazyList">LazyList</a> to lazy-load the images automatically in the background, off the UI thread; <a href="https://github.com/attenzione/android-ColorPickerPreference">ColorPickerPreference</a> for the colour picker; and finally <a href="https://github.com/adamsp/AntipodalWall">AntipodalWall</a> for the Pinterest-style view - more on this below.</p>
+
+<p>Sliding Menu and ActionBar Sherlock worked well together - all I had to do was fork Sliding Menu and let the classes extend <code>SherlockFragment</code> and <code>SherlockActivity</code> instead. Easy. Open source is good for this - I was able to modify the code as necessary, on top of being able to step through the code when I wanted to know what was going on behind the scenes.</p>
+
+<p>I made some modifications to the LazyList library as well. Originally it scaled all images it loaded; scaling is now optional for each image loaded, with the ability to set the scale factor when the <code>ImageLoader</code> class is instantiated. I also added the ability to supply a listener when you call <code>DisplayImage</code>, so that when the image is finished loading the calling class can update the UI - for example by removing a progress bar. I need to provide overloads for the <code>DisplayImage</code> method so that existing code can continue to use the class exactly as before, and then I&#8217;ll send a pull request back to the original author.</p>
+
+<p>I chose the &#8216;AntipodalWall&#8217; library as my base Pinterest-style view to work with as it allowed a varying number of columns, worked on Android 2.2 and up, and was easy to set up - none of the other options met all those criteria. Unfortunately, the app quickly ran out of memory - there was no view recycling. This is fine for a static, finite number of resources, but the nature of the app means that there are an infinite number of images to load. I spent some time working on rewriting this to implement view recycling - it&#8217;s now an <code>AdapterView</code>, recycling views as they scroll off screen and supplying them back to the <code>getView</code> method of the <code>Adapter</code>. In addition I&#8217;ve overridden the <code>onSaveInstanceState</code> and <code>onRestoreInstanceState</code> methods so the scroll position and visible views are kept when the device is rotated or the app is paused.</p>
+
+<p>There are a few problems with my implementation of this, however. It could be simplified a little, as I&#8217;m not sure my class and variable names will make too much sense to others, though I did work on refactoring that a little recently. It doesn&#8217;t handle views resizing (for example if content like an image loads in the background and a view needs resizing) - in fact, it requires views to come pre-measured from the <code>Adapter</code> and then scales them to fit, which only really works for my use case of knowing the size beforehand, and probably doesn&#8217;t work for views that contain more than just a single image. And it doesn&#8217;t behave as expected with respect to some methods; the <code>setNumberOfColumns</code> methods for example cannot be called at any time, it has to be called <em>before</em> you call <code>setAdapter</code>, which has the potential for confusion.</p>
+
+<p>Once I&#8217;ve fixed these issues, I&#8217;m a little confused as to what I should be doing about sending a pull request or not. A diff between the original and my code reveals that while a lot of the original code remains, the file is mostly new content. Certainly, anyone who was using the old library would not be able to use my version without a significant refactor - they&#8217;d have to implement <code>Adapter</code>, for a start. So I don&#8217;t know if I should leave my fork as it is - a fork - or send a pull request, or create a new repository with a new name as a new project altogether. When I&#8217;m happy with it, I&#8217;ll probably send an email to the creator of the original project and get his opinion; I&#8217;m more than happy to send the PR if he wants it!</p>
+
+<h3>What&#8217;s the point?</h3>
+
+<p>Well, for an actual use-case for the app, as the API stands right now there isn&#8217;t much of one, really. The mobile site works well, looks a lot better, and offers much greater functionality. But it does have some limitations - it only offers a single-column view for images, for example.</p>
+
+<p>Mostly, writing this app was simply good experience. I got some experience with some new libraries, and a new API - which is great, as reading other peoples code is an excellent way to grow as a developer. I learned a lot about the Android application life cycle (which I&#8217;d effectively managed to ignore with my other Android app), and figured out how to recycle views efficiently.</p>
+
+<h3>Why isn&#8217;t it on the Play Store?</h3>
+
+<p>Currently, there&#8217;s no way to filter adult/NSFW content. While these are tagged on the website, that information is unfortunately not available in the data returned from the API. I&#8217;ve been in contact with the creator of the Wookmark website recently, and asked if it&#8217;s possible to add this information - if so, I can filter all NSFW content, and obey the &#8216;No nudity&#8217; rule of the Play Store <a href="https://play.google.com/about/developer-content-policy.html">developer content policy</a>.</p>
+
+<p>Until then, if you want to load the app onto your device manually, you can either build it from source or I can send you an APK file - just send me a message on <a href="https://twitter.com/adamsnz">Twitter</a>.</p>
+
+<h3>Other thoughts</h3>
+
+<p>Unfortunately, Color Search doesn&#8217;t work that well. Indexing images by colour is, I understand, fairly difficult. It works for values such as 0xFF0000 (red), or 0x000000 (black) - but not for 0xFA0000 (slightly less saturated red). A little experimentation shows the search works for colour values 0xXXYYZZ - that is, where the R/G/B values are chosen from the set of numbers 00, 11, 22, …, DD, EE, FF, rather than the full range 00-FF. I can probably hack this fairly easily to find a &#8220;closest&#8221; colour to the one that comes out of the colour picker - this is a better solution than the current case of not finding any results at all, in most cases.</p>
+
+<p>Partway through development of this app I switched from Eclipse to IntelliJ - I wish I&#8217;d done it sooner. IntelliJ worked immediately with my already installed Android SDK, and after figuring out a few nuances I&#8217;ve found it to be a significantly easier IDE to use, and much more stable. One problem I&#8217;ve recently noticed though is that Eclipse used tab indentation, and IntelliJ uses 4 spaces, so my indentation on any class I&#8217;ve edited in IntelliJ is now a mixture of both. Oops.</p>
+
+<p>That&#8217;s all the thoughts I have for now. It&#8217;s unfortunate I can&#8217;t keep this app up on the Play Store, as I did spend some time on it, but that&#8217;s the way of things, I guess. If I can get a little extra info out of the API then it&#8217;ll only take a few minutes to update and publish. In the meantime, I&#8217;ve sure learned a lot!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Converting WP7 Maps to WP8]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8/"/>
+    <updated>2012-12-08T11:07:00-08:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/12/08/converting-wp7-maps-to-wp8</id>
+    <content type="html"><![CDATA[<p>After <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207030.aspx">converting</a> a Windows Phone 7 application (<a href="http://www.whatsshaking.co.nz">What&#8217;s Shaking, NZ?</a>) to Windows Phone 8, I noticed a few deprecation warnings around the Maps SDK. Converting the code to use the WP8 Maps SDK instead was fairly straightforward, but there were a few gotchas which I&#8217;ve covered in this post.</p>
+
+<!--more-->
+
+
+<p><em>Note: This post assumes you&#8217;ve already converted your Windows Phone 7 app to Windows Phone 8 and are wondering how to get rid of the deprecation messages.</em></p>
+
+<p><em>It covers converting your code to use the new Pushpins (assuming you were using the default ones previously - though a glance over the Windows Phone 7 custom Pushpin image docs indicates to me that it should be fairly straightforward to port those over as well, after a read through this), as well as the changes required in XAML.</em></p>
+
+<p><em>This post does not delve into displaying routes or providing directions, etc.</em></p>
+
+<p><img class="bottom" src="http://adamsp.github.com/speakman-website/images/wp7-maps-to-wp8-maps/maps_deprecated.PNG" title="Deprecation Warnings" ></p>
+
+<h3>Deleting old references</h3>
+
+<p>First, delete both the old <a href="http://phone.codeplex.com/">Windows Phone Toolkit</a> if you were using it (I was using it for the <code>ToggleSwitch</code> control), and the <code>Microsoft.Controls.Phone.Maps</code> library from your project references. If some of your other code breaks (ie, the ToggleSwitch), don&#8217;t worry, we&#8217;re going to fix that later.</p>
+
+<p>There will of course be references to these namespaces throughout your code. Feel free to delete these now, or as we go.</p>
+
+<p>While you&#8217;re changing things in the Solution Explorer, you may as well update the WMAppManifest file - you need to include the new <code>IP_CAP_MAP</code> capability.</p>
+
+<p><img class="bottom" src="http://adamsp.github.com/speakman-website/images/wp7-maps-to-wp8-maps/maps_app_manifest.PNG" title="WMAppManifest" ></p>
+
+<h3>Changes to XAML</h3>
+
+<p>Next, edit your XAML to reference the new xmlns declaration:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>xmlns:maps="clr-namespace:Microsoft.Phone.Maps.Controls;assembly=Microsoft.Phone.Maps"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now your <code>&lt;maps /&gt;</code> tag will probably show up with some blue squiggly underlines, previously I had this on one of my Map pages:</p>
+
+<figure class='code'><figcaption><span>Old XAML</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;maps:Map</span> <span class="na">Grid.Row=</span><span class="s">&quot;1&quot;</span> <span class="na">Name=</span><span class="s">&quot;QuakeMap&quot;</span>
+</span><span class='line'>    <span class="na">CredentialsProvider=</span><span class="s">&quot;your_maps_api_key_here&quot;</span>
+</span><span class='line'>    <span class="na">ZoomLevel=</span><span class="s">&quot;5.3&quot;</span>
+</span><span class='line'>    <span class="na">ZoomBarVisibility=</span><span class="s">&quot;Collapsed&quot;</span>
+</span><span class='line'>    <span class="na">CopyrightVisibility=</span><span class="s">&quot;Collapsed&quot;</span>
+</span><span class='line'>    <span class="na">LogoVisibility=</span><span class="s">&quot;Collapsed&quot;</span>
+</span><span class='line'>    <span class="na">ScaleVisibility=</span><span class="s">&quot;Visible&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;maps:Map.Center&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;my:GeoCoordinate</span> <span class="na">Altitude=</span><span class="s">&quot;NaN&quot;</span>
+</span><span class='line'>            <span class="na">Course=</span><span class="s">&quot;NaN&quot;</span>
+</span><span class='line'>            <span class="na">HorizontalAccuracy=</span><span class="s">&quot;NaN&quot;</span>
+</span><span class='line'>            <span class="na">Latitude=</span><span class="s">&quot;-41&quot;</span>
+</span><span class='line'>            <span class="na">Longitude=</span><span class="s">&quot;173&quot;</span>
+</span><span class='line'>            <span class="na">Speed=</span><span class="s">&quot;NaN&quot;</span>
+</span><span class='line'>            <span class="na">VerticalAccuracy=</span><span class="s">&quot;NaN&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/maps:Map.Center&gt;</span>
+</span><span class='line'><span class="nt">&lt;/maps:Map&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, my new XAML looks like this:</p>
+
+<figure class='code'><figcaption><span>New XAML</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;maps:Map</span> <span class="na">Grid.Row=</span><span class="s">&quot;1&quot;</span> <span class="na">Name=</span><span class="s">&quot;QuakeMap&quot;</span>
+</span><span class='line'>          <span class="na">ZoomLevel=</span><span class="s">&quot;5.3&quot;</span>
+</span><span class='line'>          <span class="na">Center=</span><span class="s">&quot;-41, 173&quot;</span>
+</span><span class='line'>          <span class="na">Loaded=</span><span class="s">&quot;QuakeMap_Loaded&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'><span class="nt">&lt;/maps:Map&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Much simpler, and all the previous properties I had marked as <code>Collapsed</code> are now collapsed by default (and no longer accessible).</p>
+
+<h3>Pushpins</h3>
+
+<p>Unfortunately the other part of the Maps that we&#8217;re talking about today (the Pushpins) has become <em>more</em> complicated, not less. Where previously you would simply create a <code>Pushpin</code> object, assign it a location and some content (and perhaps an event listener), and then add it via a <code>Map.Children.Add(pin)</code> call, now it&#8217;s not that simple.</p>
+
+<p>To add the Pushpins, we now need to download and reference the <em>new</em> WPToolkit via NuGet. Go on, I&#8217;ll wait (the new one I used was published Oct 30 2012, was top result after searching for WPtoolkit). We need this for the Pushpins, as they are no longer included in the built-in Maps library (which is now located in the <code>Microsoft.Phone.Maps</code> assembly, as seen above). This should also fix any other issues you had where things from the previous Toolkit were no longer available (once you update your <code>using</code> statements).</p>
+
+<p>Once that&#8217;s done, you can start fixing your existing Pushpin code. First, add a reference to the package you just downloaded:</p>
+
+<figure class='code'><figcaption><span>New XAML</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'>using Microsoft.Phone.Maps.Toolkit;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The next thing you&#8217;ll notice is that the <code>Location</code> property of the Pushpin no longer exists. It&#8217;s now called <code>GeoCoordinate</code>, that&#8217;s all. That should be all you need to change there:</p>
+
+<figure class='code'><figcaption><span>Pushpin code</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="n">Pushpin</span> <span class="n">pin</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Pushpin</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">GeoCoordinate</span> <span class="p">=</span> <span class="n">quake</span><span class="p">.</span><span class="n">Location</span><span class="p">,</span>
+</span><span class='line'>    <span class="n">Content</span> <span class="p">=</span> <span class="n">quake</span><span class="p">.</span><span class="n">FormattedMagnitude</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now to add the pin, we need to:</p>
+
+<ol>
+<li>Create a <code>MapOverlay</code> object and add the pin to the overlay</li>
+<li>Create a <code>MapLayer</code> object and add the overlay to the layer</li>
+<li>Add the <code>MapLayer</code> to the <code>Layers</code> property of the map</li>
+</ol>
+
+
+<p>So let&#8217;s do that:</p>
+
+<figure class='code'><figcaption><span>Pushpin code</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="n">MapOverlay</span> <span class="n">overlay</span> <span class="p">=</span> <span class="k">new</span> <span class="n">MapOverlay</span><span class="p">();</span>
+</span><span class='line'><span class="n">overlay</span><span class="p">.</span><span class="n">Content</span> <span class="p">=</span> <span class="n">pin</span><span class="p">;</span>
+</span><span class='line'><span class="n">overlay</span><span class="p">.</span><span class="n">GeoCoordinate</span> <span class="p">=</span> <span class="n">quake</span><span class="p">.</span><span class="n">Location</span><span class="p">;</span>
+</span><span class='line'><span class="n">overlay</span><span class="p">.</span><span class="n">PositionOrigin</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="m">0</span><span class="p">,</span> <span class="m">1</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">MapLayer</span> <span class="n">layer</span> <span class="p">=</span> <span class="k">new</span> <span class="n">MapLayer</span><span class="p">();</span>
+</span><span class='line'><span class="n">layer</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="n">overlay</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">QuakeMap</span><span class="p">.</span><span class="n">Layers</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="n">layer</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A few things to note here:</p>
+
+<ul>
+<li>Setting the <code>MapOverlay.PositionOrigin</code> is the point in your overlays content you would like centered on the <code>GeoCoordinate</code>. The overlay has (0,0) as top left, and (1,1) as bottom right of your content. Since we&#8217;re using the old Pushpin image, we want (0,1) for bottom left. If (for example) you had an arrow pointing from left-to-right and you wanted the tip of the arrow to be pointing at the location, you would specify <code>overlay.PositionOrigin = new Point(1, 0.5);</code> for the center of the right-hand side.</li>
+<li>A Map can have multiple <code>MapLayer</code>s</li>
+<li>A <code>MapLayer</code> can have multiple <code>MapOverlay</code>s</li>
+<li>We have to specify the <code>GeoCoordinate</code> property twice - once for the <code>Pushpin</code> itself, and once for the <code>MapOverlay</code> it&#8217;s going into.</li>
+</ul>
+
+
+<p>If you&#8217;re adding multiple pins simultaneously, you may want to add them in separate layers or on the same layer. I&#8217;ve opted for inserting all pins on the same layer, as I&#8217;ve found this exhibits the same behaviour I was experiencing previously - pins added later appear on top - so I&#8217;ve found no reason to experiment.</p>
+
+<p>For further reading, check out the <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207045(v=vs.105).aspx">Windows Phone Dev Center</a>.</p>
+
+<h3>Maps API Key</h3>
+
+<p>You may have noticed earlier that you no longer specify the <code>CredentialsProvider</code> in the XAML. Instead we have an event handler for the <code>Loaded</code> event on the map. As <a href="http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207033(v=vs.105).aspx#BKMK_appidandtoken">detailed on MSDN</a> we now specify an ApplicationID and AuthenticationToken in code. This looks to be very simple, though I haven&#8217;t tried it yet (as you get the ApplicationID and AuthenticationToken during the app submission process).</p>
+
+<figure class='code'><figcaption><span>Map.Loaded Event Handler</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="k">private</span> <span class="k">void</span> <span class="nf">QuakeMap_Loaded</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">RoutedEventArgs</span> <span class="n">e</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">Microsoft</span><span class="p">.</span><span class="n">Phone</span><span class="p">.</span><span class="n">Maps</span><span class="p">.</span><span class="n">MapsSettings</span><span class="p">.</span><span class="n">ApplicationContext</span><span class="p">.</span><span class="n">ApplicationId</span> <span class="p">=</span> <span class="s">&quot;ApplicationID&quot;</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">Microsoft</span><span class="p">.</span><span class="n">Phone</span><span class="p">.</span><span class="n">Maps</span><span class="p">.</span><span class="n">MapsSettings</span><span class="p">.</span><span class="n">ApplicationContext</span><span class="p">.</span><span class="n">AuthenticationToken</span> <span class="p">=</span> <span class="s">&quot;AuthenticationToken&quot;</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Localizing a Windows Phone (7) application]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application/"/>
+    <updated>2012-11-20T08:49:00-08:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/11/20/localizing-a-windows-phone-application</id>
+    <content type="html"><![CDATA[<p>I&#8217;ve been trying to clean up the What&#8217;s Shaking, NZ? for Windows Phone 7 <a href="https://github.com/adamsp/wsnz-windowsphone">codebase</a> recently, as there was quite a bit of duplicated code and plenty of room for problems (read: shitty code). I&#8217;ll be migrating it to Windows Phone 8 soon, and want it as clean as possible before I start.</p>
+
+<!-- more -->
+
+
+<p>One part of the clean up was localization. Localization of your resources is important, as it allows you to easily distribute your application in multiple languages without having to modify your code. Too few developers do this, and having an application display its content in the language of the device is a great way to make your users feel appreciated. I&#8217;ve done localization in Java previously, but never in .NET. I did some Googling and found a few guides, it was pretty simple:</p>
+
+<ul>
+<li>Add an <code>AppResources.resx</code> file (for your default language, as specified in Assembly Info for the project)</li>
+<li>Add some strings with keys</li>
+<li>Reference the keys in code wherever the strings are needed</li>
+<li>Additional languages are just <code>AppResources.xx-YY.resx</code>, where <code>xx</code> is the region and <code>YY</code> is the language. For example, <code>AppResources.de-DE.resx</code>. You can see the full list <a href="http://msdn.microsoft.com/en-us/library/hh202918(v=vs.92).aspx">here</a>.</li>
+<li>Finally edit the <code>*.csproj</code> file to include your newly supported languages.</li>
+</ul>
+
+
+<p>Pretty simple. However, the <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">guide</a> I was following didn&#8217;t detail how to handle the case where you had multiple projects. Oh dear. I couldn&#8217;t find anything online about supporting multiple projects - other than just having a new <code>AppResources.resx</code> file per project, which I didn&#8217;t want.</p>
+
+<p>As it turns out, it&#8217;s still very simple to do. Instead of adding the <code>AppResources.resx</code> file to the current project, just add a new project as a Windows Phone class library and then add the <code>AppResources.resx</code> file to that. Now, you can reference it from anywhere, provided you include a reference and a <code>using</code> statement from the other project back into the resources project:</p>
+
+<figure class='code'><figcaption><span>MainPage.xaml.cs </span><a href='https://github.com/adamsp/wsnz-windowsphone/blob/dev/WhatsShakingNZ/MainPage.xaml.cs#L43'>Source</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="k">using</span> <span class="nn">WhatsShakingNZ.Localization</span><span class="p">;</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="k">private</span> <span class="k">void</span> <span class="nf">InitializeApplicationBar</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ApplicationBarIconButton</span> <span class="n">refreshButton</span> <span class="p">=</span> <span class="k">new</span> <span class="n">ApplicationBarIconButton</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">refreshButton</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="n">AppResources</span><span class="p">.</span><span class="n">AppBarRefreshButtonText</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To access the resources from XAML, you need to add the following class to your resources library:</p>
+
+<figure class='code'><figcaption><span>LocalizedStrings.cs </span><a href='https://github.com/adamsp/wsnz-windowsphone/blob/dev/Localization/LocalizedStrings.cs'>Source</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c#'><span class='line'><span class="k">public</span> <span class="k">class</span> <span class="nc">LocalizedStrings</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="k">public</span> <span class="nf">LocalizedStrings</span><span class="p">()</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">private</span> <span class="k">static</span> <span class="n">AppResources</span> <span class="n">localizedResources</span> <span class="p">=</span> <span class="k">new</span> <span class="n">AppResources</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">public</span> <span class="n">AppResources</span> <span class="n">LocalizedResources</span> <span class="p">{</span> <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="n">localizedResources</span><span class="p">;</span> <span class="p">}</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You will also need to add the following to the <code>App.xaml</code> file (the guide I linked to above doesn&#8217;t detail all of this):</p>
+
+<figure class='code'><figcaption><span>App.xaml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Application</span>
+</span><span class='line'><span class="err">...</span>
+</span><span class='line'><span class="na">xmlns:local=</span><span class="s">&quot;clr-namespace:WhatsShakingNZ.Localization;assembly=WhatsShakingNZ.Localization&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;Application.Resources&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;local:LocalizedStrings</span> <span class="na">x:Key=</span><span class="s">&quot;LocalizedStrings&quot;</span> <span class="nt">/&gt;</span>
+</span><span class='line'>        ...
+</span><span class='line'>    <span class="nt">&lt;Application.Resources&gt;</span>
+</span><span class='line'>...
+</span><span class='line'><span class="nt">&lt;/Application&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And then to reference the resources in the XAML for each page, change anything that was using hardcoded text to use a binding as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;TextBlock</span> <span class="na">x:Name=</span><span class="s">&quot;PageTitle&quot;</span>
+</span><span class='line'>    <span class="na">Text=</span><span class="s">&quot;{Binding Path=LocalizedResources.PageTitleLatestQuakes, Source={StaticResource LocalizedStrings}}&quot;</span>
+</span><span class='line'>    <span class="na">Margin=</span><span class="s">&quot;9,-7,0,0&quot;</span>
+</span><span class='line'>    <span class="na">Style=</span><span class="s">&quot;{StaticResource PhoneTextTitle1Style}&quot;</span><span class="nt">/&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can see all of these changes in <a href="https://github.com/adamsp/wsnz-windowsphone/commit/49c511f9be2181955b3a5e7b06bf88068ec32ec4">this commit</a>.</p>
+
+<p>There are a few important gotchas with this:</p>
+
+<ul>
+<li>The DLL filename <strong>cannot end in &#8220;Resources&#8221;</strong>. I had some trouble with this, but I eventually found <a href="http://isolatedstorage.wordpress.com/2010/10/25/reserved-xap-file-names-resource-dll/">this blog post</a> detailing the fact there are some reserved file names in XAP files. Specifically, you can&#8217;t have DLLs ending in &#8216;Resources&#8217;. If you have named your project as &#8220;Resources&#8221;, everything will compile fine but your app will crash when it runs. It&#8217;s easy enough to fix - I renamed my project (and the properties that named the DLL) from <code>WhatsShakingNZ.Resources</code> to <code>WhatsShakingNZ.Localization</code>. After doing this, everything worked perfectly.</li>
+<li>You must specify the <code>AppResources.resx</code> Access Modifier as <code>public</code> or you won&#8217;t be able to access the resource properties:
+<img class="bottom" src="http://adamsp.github.com/speakman-website/images/wp7-localization/access_modifier.PNG"></li>
+<li>The default language as specified in the Assembly Information under the project Properties window is the one that your default <code>AppResources.resx</code> file is considered to be. If the device your application is running on is running any language other than your default, it will search for the resource string in the corresponding language resource file. If that resource file does not exist (or, if the specific key it is looking for does not exist in that region-specific file), then it will fall back to your default. This means you can have some strings localised and some not, even within the same page.</li>
+<li>To support additional languages, you have to add the <code>AppResources.xx-YY.resx</code> file, and also declare in the <code>.csproj</code> file for the <strong>main project</strong> that it supports the language (not the project containing your resource files). You have to edit this file manually in a text editor, as detailed in step 4 of <a href="http://msdn.microsoft.com/en-us/library/ff637520(v=vs.92).aspx">the guide linked above</a>. You can check out <a href="http://blogs.msdn.com/b/webdev/archive/2008/06/10/localizing-a-silverlight-application.aspx">this MSDN blog</a>, <a href="http://msdn.microsoft.com/en-us/library/dd941932(VS.95).aspx">this guide</a> or <a href="http://social.msdn.microsoft.com/Forums/en-US/vsx/thread/7e3267e4-ab1f-4fd0-90f4-d9292831bb2b/">this forum post</a> for a bit more information on how and why.</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Google Maps zoom levels on Android]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/10/28/google-maps-zoom-levels-on-android/"/>
+    <updated>2012-10-28T12:40:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/10/28/google-maps-zoom-levels-on-android</id>
+    <content type="html"><![CDATA[<p>I had an interesting problem today where I needed to scale the default zoom for the map view for my <a href="https://play.google.com/store/apps/details?id=speakman.whatsshakingnz">Android app</a>, depending on the screen size. I&#8217;d previously hardcoded it to a zoom level of 6. This worked nicely on my testing device (a Nexus One) and looked OK (but not great) on a Galaxy S3 - but I saw it last night on a Nexus 7 and it looked ridiculous. My desire was to have the map view show the whole of New Zealand, filling up as much of the screen as possible. On the Nexus 7, the country was tiny.</p>
+
+<!-- more -->
+
+
+<p>I&#8217;d previously considered the fact that I would likely need to adjust the zoom level on a per-device level, and had added a method stub with the intent of adding some logic in there. Up til now I hadn&#8217;t bothered with it, as, well, &#8220;It works on my device!&#8221; However looking at it on this Nexus 7, I figured it was time to do something about it.</p>
+
+<p>A bit of Googling around showed that the problem of zooming relative to screen size was common - but the <a href="http://stackoverflow.com/questions/2666922/auto-size-zoom-on-google-maps-in-java-depending-android-screen-resolution">common problem/solution</a> was to ensure the map zoomed to span a set of markers in an <code>ItemizedOverlay</code>. I specifically <strong>did not</strong> want to do this - I want to show the whole country, not just the areas where the earthquakes are!</p>
+
+<p>The <code>MapController.zoomToSpan(int latSpanE6, int lonSpanE6)</code> method looked like it would do what I wanted, but honestly, it&#8217;s fucked. It gave me either zoom level 5 or zoom level 7, and I could never get it to give me zoom 6 (which is what I wanted, for the screen size on the emulator I was trying it on). Incrementally decreasing the size of the area I was requesting it to zoom to was no help. Admittedly the <a href="https://developers.google.com/maps/documentation/android/reference/com/google/android/maps/MapController#zoomToSpan(int, int)">documentation</a> gives no guarantees, and says that after the zoom &#8220;at least one of the new latitude or the new longitude will be within a factor of 2 from the corresponding parameter.&#8221; This wasn&#8217;t good enough.</p>
+
+<p>I ended up doing it the hard way and experimenting with different screen resolution emulators until I found the right zooms. I figured 5, 6 and 7 would probably do it, depending on screen size. My code now looks like this:</p>
+
+<figure class='code'><figcaption><span>getDefaultZoomForDevice() </span><a href='https://github.com/adamsp/wsnz-android/blob/master/Whats%20Shaking%20NZ/src/speakman/whatsshakingnz/fragments/MapFragment.java#L117'>Source</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="kd">private</span> <span class="kt">int</span> <span class="nf">getDefaultZoomForDevice</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">WindowManager</span> <span class="n">wm</span> <span class="o">=</span> <span class="o">(</span><span class="n">WindowManager</span><span class="o">)</span> <span class="n">getActivity</span><span class="o">().</span><span class="na">getApplicationContext</span><span class="o">().</span><span class="na">getSystemService</span><span class="o">(</span><span class="n">Context</span><span class="o">.</span><span class="na">WINDOW_SERVICE</span><span class="o">);</span>
+</span><span class='line'>  <span class="n">Display</span> <span class="n">display</span> <span class="o">=</span> <span class="n">wm</span><span class="o">.</span><span class="na">getDefaultDisplay</span><span class="o">();</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="n">display</span><span class="o">.</span><span class="na">getWidth</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span><span class="o">(</span><span class="n">width</span> <span class="o">&lt;</span> <span class="mi">480</span><span class="o">)</span>
+</span><span class='line'>      <span class="k">return</span> <span class="mi">5</span><span class="o">;</span>
+</span><span class='line'>  <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">width</span> <span class="o">&lt;</span> <span class="mi">720</span><span class="o">)</span>
+</span><span class='line'>      <span class="k">return</span> <span class="mi">6</span><span class="o">;</span>
+</span><span class='line'>  <span class="k">else</span>
+</span><span class='line'>      <span class="k">return</span> <span class="mi">7</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I went with these resolutions because they represent some of the most common sizes among popular phones. Below 480px wide we have 320x480 devices such as the LG P500 (Optimus One) or the Galaxy Ace. Below 720px wide we have the common 480x800 devices such as my Nexus One, or the Galaxy S and Galaxy S II. And finally we have even larger devices with higher resolutions, such as the 720x1280 Galaxy S III (this is the most common device for all downloads of What&#8217;s Shaking, NZ? for Android) and HTC One X, and the 800x1280 Nexus 7 tablet.</p>
+
+<p>There are some obvious problems with this solution. It&#8217;s not generic at all, and works only for New Zealand. The <code>Display.getWidth()</code> call is actually deprecated since API Level 13, however I want to support older devices as well - currently nearly 45% of all my downloads for this app are Android 2.3 and below. Also, note that this solution doesn&#8217;t work very well for people with strange resolution phones - anything that doesn&#8217;t fall into the broad categories I&#8217;ve defined above is likely to meet with a strange/unfortunate default zoom. However if your screen size is that weird, there&#8217;s probably not a whole lot more I can do about it - the Android Maps API doesn&#8217;t allow anything more granular than these discrete levels, and these zoom levels fit New Zealand to the screen the best for the given sizes. Lastly, it won&#8217;t scale properly when even larger devices are released.</p>
+
+<p>However, despite these problems, I still found it to be the simplest, and most effective way of handling zoom at a per-device level. I would love to see a more granular zoom level (in Windows Phone you supply a double for zoom level), as it would presumably fix the problems with the <code>zoomToSpan</code> failures (this is a far more generic solution and would almost certainly be preferable). However, even if that does come about it won&#8217;t make much difference. With all these older devices still in use that won&#8217;t support it, it&#8217;ll take a long time to make enough of a dent in the user base that it&#8217;s worth thinking about again.</p>
+
+<p><a href="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_large.PNG"><img class="bottom" src="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_large.PNG" width="160" height="240" title="Large screen, 720x1280px, zoom level 7" ></a>
+<a href="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_medium.PNG"><img class="bottom" src="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_medium.PNG" width="160" height="240" title="Medium screen, 480x800px, zoom level 6" ></a>
+<a href="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_small.PNG"><img class="bottom" src="http://adamsp.github.com/speakman-website/images/android-maps/android_maps_small.PNG" width="160" height="240" title="Small screen, 320x480px, zoom level 5" ></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Setting up Octopress on Github Pages]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2012/09/11/setting-up-octopress-on-github-pages/"/>
+    <updated>2012-09-11T20:22:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2012/09/11/setting-up-octopress-on-github-pages</id>
+    <content type="html"><![CDATA[<p>There&#8217;s a lot of good information out there already on setting up Octopress on Github. The <a href="http://octopress.org/docs/deploying/github/">Octopress documentation</a> covers the subject in depth, as do assorted blog posts. However, perhaps it&#8217;s because I was drinking while doing it, or perhaps it was because I missed something while reading the guides, or my poor mental model of how things were supposed to work, or even that it was late at night, but I had a lot of trouble setting up <a href="http://www.whatsshaking.co.nz">What&#8217;s Shaking, NZ?</a> on Github Pages.</p>
+
+<!-- more -->
+
+
+<p>A few things to note:</p>
+
+<ol>
+<li>A lot of what I&#8217;ve done with setting up this website is completely new to me. I&#8217;ve never edited CSS before, for example &#8211; or ever owned a domain name. So if something is obvious to most, apologies if an explanation may seem unnecessary. I especially apologise if an explanation is wrong! Please let me know.</li>
+<li>If you want a guide to setting things up, this isn&#8217;t it. A lot of things I did here are <em>wrong</em>. This post is simply to point out some of the things I struggled with, in the hope that pointing out the right way to do things may be of help to someone else some day.</li>
+</ol>
+
+
+<p>Now, on to the post!</p>
+
+<h3>Intent</h3>
+
+<p>My intent was to host the website as a project page on a Github repo, using a custom domain. This repository would consist of a <code>master</code> branch with the source on it, and a <code>gh-pages</code> branch with the website on it. From there, I could have the www.whatsshaking.co.nz domain point at the right place and everything would all work splendidly. I spent a fair bit of time playing around with colours and layout and resizing locally (resizing the header was only possible thanks to <a href="http://blog.bigdinosaur.org/changing-octopresss-header/">Lee at Big Dinosaur</a>). When it was at a this-sucks-less-than-everything-else-I&#8217;ve-tried stage, I decided it was time to put it up online.</p>
+
+<p>I spent a bit of time poring over the <a href="http://octopress.org/docs/deploying/github/">Octopress documentation</a> as well as <a href="http://robdodson.me/blog/2012/04/30/custom-domain-with-octopress-and-github-pages/">this post by Rob Dodson</a>. I figured I was armed with enough knowledge to get this to work first time.</p>
+
+<p>My test setup on my local machine looked something like this:</p>
+
+<ul>
+<li>Octopress cloned into <code>~/Sites/wsnz</code> using the command on the site</li>
+<li><a href="http://pow.cx/">POW</a> running so I could access http://wsnz.dev locally and see the changes to my site as I made them, after running <code>rake watch</code></li>
+</ul>
+
+
+<p>What I wanted, was this:
+- Octopress WSNZ site in <code>~/Code/wsnz-website</code> with source on <code>master</code> branch and easy deployment to <code>gh-pages</code> branch
+- POW running the same as above, for easy local development</p>
+
+<p>So, with beer in hand and the internet at the ready I embarked on this adventure.</p>
+
+<h3>Following instructions</h3>
+
+<p>First of all, I wanted my code in a different place locally. So I created the repository on the Github site (<a href="https://github.com/adamsp/wsnz-website">adamsp/wsnz-website</a>) and cloned to <code>~/Code/wsnz-website</code> using the &#8216;Clone in Mac&#8217; button and the Github application. Then through the OS X Finder I copied the contents of <code>~/Sites/wsnz</code> into <code>~/Code/wsnz-website</code>. Importantly, this means I no longer have the original .git folder, so that explains why the <a href="https://github.com/adamsp/wsnz-website">wsnz-website repository</a> has no commit history (<s>where as the <a href="https://github.com/adamsp/adamsp.github.com">repo for this site</a> is a &#8216;proper&#8217; fork and does have the commit history</s> <strong>Edit 18 Sep 2012:</strong> <a href="https://github.com/adamsp/speakman-website">This site</a> ended up copy/pasted from that linked repo).</p>
+
+<p>Now my code was in the right place, I went ahead and did some other modifications. I changed my <code>_config.yml</code> file so that the URL property pointed at the domain, <code>url: www.whatsshaking.co.nz</code>, I added a <a href="https://github.com/dstufft/octopress/blob/9f40242b1e7eb0098f0ef3c508c7bed7e647b982/.gitignore">.gitignore</a>, added a Google Analytics ID, etc. I also did <code>echo 'www.whatsshaking.co.nz' &gt;&gt; source/CNAME</code>, as instructed in the guides, so I had a CNAME file with my site URL in it.</p>
+
+<p>I now ran <code>rake setup_github_pages</code> (with the git endpoint as <code>git@github.com:adamsp/wsnz-website</code>) &#8211; this changed my <code>_config.yml</code> and <code>Rakefile</code>. This is wrong!</p>
+
+<p>When I ran <code>rake deploy</code> I ended up with a broken website. I figured I should be able to see it at http://adamsp.github.com/wsnz-website &#8211; but that didn&#8217;t work. This was confusing, as everything appeared to be right on the <code>gh-pages</code> branch.</p>
+
+<h3>Fixing problems</h3>
+
+<p>I was looking through HTML in the <code>gh-pages</code> branch when I realised that the files weren&#8217;t at root. Checking back in my source again, it looked like everything in the config files was prefixed with <code>wsnz-website/</code>!</p>
+
+<p>The <code>setup_github_pages</code> command changed all the URLs to be prefixed with <code>wsnz-website/</code>. I had to go through and edit these out. So you should still have the following settings in these files:</p>
+
+<figure class='code'><figcaption><span>_config.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">subscribe_rss</span><span class="o">:</span> <span class="o">/</span><span class="nt">atom</span><span class="nc">.xml</span>
+</span><span class='line'><span class="nt">root</span><span class="o">:</span> <span class="o">/</span>
+</span><span class='line'><span class="nt">destination</span><span class="o">:</span> <span class="nt">public</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>Rakefile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">public_dir</span> <span class="o">=</span> <span class="s2">&quot;public&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>config.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">http_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span>
+</span><span class='line'><span class="n">http_images_path</span> <span class="o">=</span> <span class="s2">&quot;/images&quot;</span>
+</span><span class='line'><span class="n">http_fonts_path</span> <span class="o">=</span> <span class="s2">&quot;/fonts&quot;</span>
+</span><span class='line'><span class="n">css_dir</span> <span class="o">=</span> <span class="s2">&quot;public/stylesheets&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But oddly enough, things still weren&#8217;t working. Turns out, I had to leave the URL property in <code>_config.yml</code> as <code>url: http://adamsp.github.com/wsnz-website</code>.</p>
+
+<p>Once I did this and redeployed, everything worked as expected. I updated my link in <code>~/.pow</code> to point to <code>~/Code/wsnz-website</code> and I could access my site for local development again. Pushing blog posts and changes is now as simple as <code>rake generate</code> then <code>rake deploy</code>. Easy.</p>
+
+<h3>Specific issues</h3>
+
+<p>Anyway, after all of that, these are the issues I had, and their fixes/correct settings:</p>
+
+<ul>
+<li>The settings in <code>_config.yml</code> <em>require a space after the colon</em> or else the generate command fails.</li>
+<li>If you&#8217;re updating files in the sass folder and things don&#8217;t appear to be changing, you may need to delete <code>.sass_cache</code>.</li>
+<li>The <code>url</code> setting in <code>_config.yml</code> is the Github pages URL &#8211; eg <code>url: http://adamsp.github.com/wsnz-website</code>. This is true even if using a custom domain. See <a href="https://github.com/adamsp/wsnz-website/commit/44e66db6a834624089e06bbd9b60779881045aba">this commit</a> for what I mean.</li>
+<li>The paths in <code>_config.yml</code>, <code>config.rb</code> and <code>Rakefile</code> should <em>not</em> contain your sites repository name. eg <code>destination: public</code> and not <code>destination: wsnz-website/public</code>. The <code>rake setup_github_pages</code> command may put these settings there.</li>
+<li>The <code>CNAME</code> file should exist under the source folder, and then when deployed it will exist in the root of your <code>gh-pages</code> directory. This is required.</li>
+<li><a href="http://octopress.org/docs/deploying/github/#custom_domains">Setting up the DNS entries</a> is also required. With the <code>CNAME</code> file present you cannot access the site at the Github address. Note that you should just point it to <code>http://username.github.com</code> rather than <code>http://username.github.com/project-page</code>.</li>
+</ul>
+
+
+<p>Again, I must emphasise that most of this is fairly new to me. I&#8217;m sure most of these things are common knowledge, but not to me - and that means probably not to someone else.</p>
 ]]></content>
   </entry>
   

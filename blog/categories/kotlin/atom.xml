@@ -4,7 +4,7 @@
   <title><![CDATA[Category: kotlin | Adam Speakman]]></title>
   <link href="http://adamsp.github.com/speakman-website/blog/categories/kotlin/atom.xml" rel="self"/>
   <link href="http://adamsp.github.com/speakman-website/"/>
-  <updated>2017-10-09T16:48:30-04:00</updated>
+  <updated>2019-04-07T15:33:39-07:00</updated>
   <id>http://adamsp.github.com/speakman-website/</id>
   <author>
     <name><![CDATA[Adam]]></name>
@@ -14,9 +14,123 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Mockito UnfinishedStubbingException in tests]]></title>
+    <link href="http://adamsp.github.com/speakman-website/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests/"/>
+    <updated>2019-04-07T13:05:00-07:00</updated>
+    <id>http://adamsp.github.com/speakman-website/blog/2019/04/07/mockito-unfinishedstubbingexception-in-tests</id>
+    <content type="html"><![CDATA[<p>Ever wonder why Mockito will occasionally give you an <code>UnfinishedStubbingException</code> even though you <em>clearly</em> finished the stubbing?</p>
+
+<p>For example, the following code will fail at runtime (<code>mockChannel</code> has been setup earlier):</p>
+
+<p>``` kotlin
+whenever(mockChannelNameProvider.nameForChannel(mockChannel))</p>
+
+<pre><code>.thenReturn(mockChannel.id())
+</code></pre>
+
+<p>```</p>
+
+<p>With an exception like this:</p>
+
+<p>```
+org.mockito.exceptions.misusing.UnfinishedStubbingException:
+Unfinished stubbing detected here:
+-> at ExampleFailingTestKotlin.setupChannelName(ExampleInterfacesTest.kt:30)</p>
+
+<p>E.g. thenReturn() may be missing.
+Examples of correct stubbing:</p>
+
+<pre><code>when(mock.isOk()).thenReturn(true);
+when(mock.isOk()).thenThrow(exception);
+doThrow(exception).when(mock).someVoidMethod();
+</code></pre>
+
+<p>Hints:
+ 1. missing thenReturn()
+ 2. you are trying to stub a final method, which is not supported
+ 3: you are stubbing the behaviour of another mock inside before 'thenReturn' instruction is completed
+```</p>
+
+<p>This is a very good exception message. It gives you some common examples of what you might have done wrong, and how to fix them. However, our code doesn't match any of the examples.</p>
+
+<!-- more -->
+
+
+<p>If we look at the generated Java for this (<code>Tools &gt; Kotlin &gt; Show Kotlin Bytecode &gt; Decompile</code>), it <em>still</em> looks like it should work - we definitely finish the stubbing:</p>
+
+<p>``` java
+Channel var10001 = this.mockChannel;
+if (var10001 == null) {
+  Intrinsics.throwUninitializedPropertyAccessException("mockChannel");
+}</p>
+
+<p>OngoingStubbing var2 = Mockito.when(var1.nameForChannel(var10001));
+var10001 = this.mockChannel;
+if (var10001 == null) {
+  Intrinsics.throwUninitializedPropertyAccessException("mockChannel");
+}</p>
+
+<p>var2.thenReturn(var10001.id());
+```</p>
+
+<p>So why do we get an <code>UnfinishedStubbingException</code>? <em>Because we're accessing a mock before we finish the stubbing.</em></p>
+
+<p>The failure happens on this line from the decompiled Kotlin bytecode:
+<code>java
+var2.thenReturn(var10001.id());
+</code></p>
+
+<p>Let's make this a little clearer by using descriptive names:
+<code>java
+ongoingStubbing.thenReturn(mockChannel.id());
+</code></p>
+
+<p>You can break this apart a little further:
+<code>java
+String id = mockChannel.id();
+ongoingStubbing.thenReturn(id);
+</code></p>
+
+<p>So we have a reference to an <code>OngoingStubbing</code>. Internally, Mockito statically maintains a reference to a <code>MockingProgress</code>. When we access the mock (<code>mockChannel.id()</code>) after we've already started the stubbing, Mockito goes off to the <code>MockingProgress</code> and <a href="https://github.com/mockito/mockito/blob/49e07acc30fb486a8af773977e461cf4d1c876ec/src/main/java/org/mockito/internal/handler/MockHandlerImpl.java#L64">calls through to a <code>validateState()</code> method</a>, which does this:</p>
+
+<p>``` java
+public void validateState() {
+  validateMostStuff();</p>
+
+<p>  //validate stubbing:
+  if (stubbingInProgress != null) {</p>
+
+<pre><code>  Location temp = stubbingInProgress;
+  stubbingInProgress = null;
+  throw unfinishedStubbing(temp);
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>Because a stubbing is still in progress, we get an <code>UnfinishedStubbingException</code>. 💥</p>
+
+<p>We can fix this by pulling the variable out of the mock on the line before we start the stubbing:
+<code>kotlin
+val channelName = mockChannel.id()
+whenever(mockChannelNameProvider.nameForChannel(mockChannel)).thenReturn(channelName)
+</code></p>
+
+<p>Of course, make sure to comment <em>why</em> you're doing this for the next developer who comes along and tries to simplify this by inlining the variable.</p>
+
+<p>Now that we see why it's happening, it makes sense. Accessing a mock while setting up a different one is a bit of a code smell - they should probably be accessing some constant value. One of the best ways to prevent this situation is to use fakes not mocks for your models. Obviously, this isn't always easy though - you might have legacy concerns that prevent this or you might need to make sure that you return the same thing from two different interfaces.</p>
+
+<p>This can be a very confusing error to debug, especially when it's deep in some utility or setup method (where it might not even be obvious that you're accessing something on a mock), or when you're in the process of converting some legacy code. Next time you encounter it, consider whether you can do some refactoring to make it harder to hit.</p>
+
+<p>You can find the <a href="https://github.com/adamsp/mockito-tests">source code for this post here</a>.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Asynchronously loading data using Googles Paging Library]]></title>
     <link href="http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library/"/>
-    <updated>2017-10-09T14:42:00-04:00</updated>
+    <updated>2017-10-09T14:42:00-07:00</updated>
     <id>http://adamsp.github.com/speakman-website/blog/2017/10/09/asynchronously-loading-data-using-googles-paging-library</id>
     <content type="html"><![CDATA[<p>The recently released <a href="https://developer.android.com/topic/libraries/architecture/paging.html">Paging Library</a> from Google gives you an easy way to page data into memory off of the main thread. If you want to use it with <a href="https://developer.android.com/topic/libraries/architecture/room.html">Room</a>, then the built-in support makes it trivial. However, if you'd like to page data that exists elsewhere - from the network or disk, for example - then you have to do a little extra work.</p>
 
